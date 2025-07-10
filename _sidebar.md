@@ -1,7 +1,11 @@
-- [Start](README.md)
-- [Endpointy](endpoints.md)
-- [Błędy](errors.md)
-- [Upload plików](file-uploads.md)
-- [Moduły](modules.md)
-- [Webhooks](webhooks.md)
-- [OpenAPI Spec](openapi.yaml)
+- 🏠 [Home](README.md)
+
+**API Reference**
+- 🔗 [Endpoints](endpoints.md)
+- 🗂️ [Modules & Fields](modules.md)
+- 📦 [File Uploads](file-uploads.md)
+- 🛠️ [Webhooks](webhooks.md)
+- ❗ [Error Handling](errors.md)
+
+**Other**
+- 📄 [OpenAPI Specification](openapi.yaml)

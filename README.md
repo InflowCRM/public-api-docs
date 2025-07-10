@@ -1,8 +1,30 @@
-# InflowCRM Public API Documentation
+<p align="center">
+  <img src="https://raw.githubusercontent.com/arqo/inflowcrm-public-api-docs/main/logo.png" alt="InflowCRM Logo" width="120" style="border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin-bottom:1rem;">
+</p>
 
-Welcome to the InflowCRM Public API. This documentation provides everything you need to securely integrate with InflowCRM, automate workflows, and manage CRM data programmatically.
+<h1 align="center">InflowCRM Public API Documentation</h1>
+
+<p align="center">
+  <b>Comprehensive, modern, and easy-to-navigate documentation for the InflowCRM Public API.</b>
+</p>
 
 ---
+
+Welcome! This site provides everything you need to securely integrate with InflowCRM, automate workflows, and manage CRM data programmatically.
+
+> **Tip:** Use the sidebar to explore endpoints, guides, and references.
+
+---
+
+### 🚀 Get Started
+
+1. **Get your API Key** from your InflowCRM account admin.
+2. **Set the base URL:**
+   `https://srv.inflowcrm.pl`
+3. **Authenticate every request** by adding your API key to the `x-api-key` header.
+4. **Note:** Only fields with an **'Api field name'** set in the InflowCRM UI can be used in the API.
+
+**Example (using `curl`):**
 
 ## Quick Start
 
@@ -11,8 +33,6 @@ Welcome to the InflowCRM Public API. This documentation provides everything you 
    `https://srv.inflowcrm.pl`
 3. **Authenticate every request** by adding your API key to the `x-api-key` header.
 4. **Important:** Only fields with an **'Api field name'** set in the InflowCRM UI can be used in the API.
-
-Example (using `curl`):
 
 ```bash
 curl -H "x-api-key: YOUR_API_KEY" https://srv.inflowcrm.pl/api/getBundleModuleNames
@@ -117,7 +137,7 @@ All error responses:
 
 ---
 
-## Further Reading
+## 📚 Further Reading
 
 - [Endpoints Reference](./endpoints.md)
 - [File Upload Guide](./file-uploads.md)
@@ -127,6 +147,12 @@ All error responses:
 
 ---
 
-## OpenAPI Specification
+## 📄 OpenAPI Specification
 
 - [Full OpenAPI 3.0 Spec](./openapi.yaml)
+
+---
+
+<p align="center">
+  <sub>© 2025 InflowCRM &middot; <a href="https://github.com/arqo/inflowcrm-public-api-docs">View on GitHub</a></sub>
+</p>
