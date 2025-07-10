@@ -1,0 +1,854 @@
+openapi: 3.0.3
+info:
+  title: InflowCRM Public API
+  version: "2.0"
+  description: |
+    The InflowCRM Public API enables secure, programmatic access to CRM data and modules.
+    All endpoints require authentication via API Key in the `x-api-key` header.
+    Rate limit: **300 requests per 5 minutes per (apiKey + IP)**.
+    Deprecated endpoints under `/integration/*` return a deprecation warning.
+
+    > **Important:** Only fields with an **'Api field name'** set in the InflowCRM UI can be used in the API.
+    >
+    > For `multipart/form-data` requests, **all fields must be sent as top-level form fields** (not nested under `data`). Example:
+    >
+    > ```
+    > module=customer
+    > name=John Doe
+    > email=john@example.com
+    > document=@file.pdf
+    > ```
+servers:
+  - url: https://srv.inflowcrm.pl
+security:
+  - ApiKeyAuth: []
+tags:
+  - name: Modules
+    description: Module discovery and metadata
+  - name: Records
+    description: CRUD operations for module records
+  - name: Users
+    description: User management endpoints
+  - name: Utility
+    description: Miscellaneous and validation endpoints
+paths:
+  /webhooks/subscribe:
+    post:
+      tags: [Webhooks]
+      summary: Create webhook subscription
+      security: [{ ApiKeyAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscribeWebhookRequest'
+      responses:
+        '201':
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: uuid-subscription-id
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+  /webhooks:
+    get:
+      tags: [Webhooks]
+      summary: List webhook subscriptions
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: List of webhook subscriptions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WebhookSubscription'
+                  meta:
+                    $ref: '#/components/schemas/WebhookPaginationMeta'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+  /webhooks/{id}:
+    get:
+      tags: [Webhooks]
+      summary: Get webhook subscription details
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Webhook subscription details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/WebhookSubscription'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+    delete:
+      tags: [Webhooks]
+      summary: Delete webhook subscription
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Subscription deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      deleted:
+                        type: boolean
+                        example: true
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+  /api/getBundleModuleNames:
+    get:
+      tags: [Modules]
+      summary: Get available module names for the current user bundle
+      security: [{ ApiKeyAuth: [] }]
+      responses:
+        '200':
+          description: List of modules
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        moduleName: { type: string }
+                        singular: { type: string }
+                        plural: { type: string }
+                        systemModuleName: { type: string }
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+  /api/getUserList:
+    get:
+      tags: [Users]
+      summary: Get all active users for the current tenant
+      security: [{ ApiKeyAuth: [] }]
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+  /api/validateApiKey:
+    post:
+      tags: [Utility]
+      summary: Validate API key and return user info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                apiKey:
+                  type: string
+      responses:
+        '200':
+          description: API key is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      valid: { type: boolean }
+                      userId: { type: string }
+                      companyId: { type: string }
+                      userType: { type: string }
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/createRecord:
+    post:
+      tags: [Records]
+      summary: Create a new record (supports file upload)
+      security: [{ ApiKeyAuth: [] }]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateOrUpdateRecordRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrUpdateRecordRequest'
+      responses:
+        '201':
+          description: Record created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+  /api/updateRecord/{id}:
+    patch:
+      tags: [Records]
+      summary: Update a record (supports file upload)
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateOrUpdateRecordRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrUpdateRecordRequest'
+      responses:
+        '200':
+          description: Record updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+  /api/searchRecords:
+    post:
+      tags: [Records]
+      summary: Search records with filters and pagination
+      security: [{ ApiKeyAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRecordsRequest'
+      responses:
+        '200':
+          description: List of records
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchRecordsResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+  /api/findRecord:
+    post:
+      tags: [Records]
+      summary: Find a single record by filters
+      security: [{ ApiKeyAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FindRecordRequest'
+      responses:
+        '200':
+          description: Single record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+  /api/getModuleFields:
+    post:
+      tags: [Modules]
+      summary: Get metadata for all fields in a module
+      security: [{ ApiKeyAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                module:
+                  type: string
+      responses:
+        '200':
+          description: List of fields
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ModuleField'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/getSampleData:
+    post:
+      tags: [Modules]
+      summary: Get sample data for a module
+      security: [{ ApiKeyAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                module:
+                  type: string
+      responses:
+        '200':
+          description: Example record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/records/count:
+    post:
+      tags: [Records]
+      summary: Count records matching filters
+      security: [{ ApiKeyAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CountRecordsRequest'
+      responses:
+        '200':
+          description: Count result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      count: { type: integer }
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/{module}/{id}:
+    delete:
+      tags: [Records]
+      summary: Delete a record (soft delete)
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - name: module
+          in: path
+          required: true
+          schema: { type: string }
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Record deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+components:
+  schemas:
+    SubscribeWebhookRequest:
+      type: object
+      required: [event, hookUrl, module]
+      properties:
+        event:
+          type: string
+          description: Event type (created, updated, deleted)
+          example: created
+          pattern: '^[\w\-]{1,64}$'
+        hookUrl:
+          type: string
+          description: Webhook endpoint URL (HTTPS strongly recommended)
+          example: https://your-app.com/webhook
+          maxLength: 512
+        module:
+          type: string
+          description: Module name or canonical module identifier
+          example: customer
+          pattern: '^[\w\-]{1,64}$'
+    WebhookSubscription:
+      type: object
+      properties:
+        subscriptionId:
+          type: string
+          example: uuid-subscription-id
+        eventName:
+          type: string
+          example: created
+        hookUrl:
+          type: string
+          example: https://your-app.com/webhook
+        module:
+          type: string
+          example: customer
+        createdAt:
+          type: string
+          format: date-time
+          example: '2025-01-07T10:00:00Z'
+        modifiedAt:
+          type: string
+          format: date-time
+          example: '2025-01-07T10:00:00Z'
+    WebhookPaginationMeta:
+      type: object
+      properties:
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+              example: 1
+            perPage:
+              type: integer
+              example: 20
+            total:
+              type: integer
+              example: 45
+            pages:
+              type: integer
+              example: 3
+            hasNext:
+              type: boolean
+              example: true
+            hasPrev:
+              type: boolean
+              example: false
+    ForbiddenError:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 403
+        error:
+          type: string
+          example: Forbidden
+        message:
+          type: string
+          example: Insufficient permissions to manage webhooks
+        errorId:
+          type: string
+          example: FORBIDDEN
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+  schemas:
+    Meta:
+      type: object
+      properties:
+        pagination:
+          type: object
+          properties:
+            page: { type: integer }
+            limit: { type: integer }
+            total: { type: integer }
+            pages: { type: integer }
+        deprecation:
+          type: object
+          properties:
+            message: { type: string }
+            sunset_date: { type: string, format: date }
+            replacement_endpoint: { type: string }
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        systemLabel: { type: string }
+        email: { type: string }
+    ModuleField:
+      type: object
+      properties:
+        fieldId: { type: string }
+        apiFieldName: { type: string }
+        type: { type: string }
+        label: { type: string }
+        required: { type: boolean }
+        relationField: { type: string }
+        pickListValues:
+          type: array
+          items: { type: string }
+        relatedModule: { type: string }
+        relationFieldName: { type: string }
+        decimals: { type: integer }
+        maxLength: { type: integer }
+        minLength: { type: integer }
+        defaultValue: {}
+        helpText: { type: string }
+        placeholder: { type: string }
+        isUnique: { type: boolean }
+        isIndexed: { type: boolean }
+    CreateOrUpdateRecordRequest:
+      type: object
+      required: [module]
+      properties:
+        module:
+          type: string
+        # All other fields (including files) must be sent as top-level fields in multipart/form-data.
+        # Example: module=customer, name=John Doe, email=john@example.com, document=@file.pdf
+      additionalProperties: true
+      description: |
+        For `multipart/form-data`, all fields must be sent as top-level form fields (not nested under `data`).
+        Only fields with an 'Api field name' set in the InflowCRM UI can be used.
+    # --- Advanced Filtering Support ---
+    AdvancedFilter:
+      type: object
+      description: |
+        Advanced filter condition for a single field.
+        Supported conditions:
+          - equal
+          - notEqual
+          - greater
+          - greaterOrEqual
+          - lower
+          - lowerOrEqual
+          - in
+          - notIn
+        See AdvancedFilters for structure and examples.
+      required: [condition, value]
+      properties:
+        condition:
+          type: string
+          enum: [equal, notEqual, greater, greaterOrEqual, lower, lowerOrEqual, in, notIn]
+          description: Filtering condition (operator).
+        value:
+          description: Value to compare against. For `in`/`notIn`, provide an array.
+        fieldType:
+          type: string
+          description: Field type (string, number, date, boolean, etc.)
+      example:
+        condition: greaterOrEqual
+        value: 100
+        fieldType: number
+
+    AdvancedFilters:
+      type: object
+      description: |
+        Object where each key is a field name and value is an AdvancedFilter or array of AdvancedFilters.
+        Allows combining multiple conditions per field.
+      additionalProperties:
+        oneOf:
+          - $ref: '#/components/schemas/AdvancedFilter'
+          - type: array
+            items:
+              $ref: '#/components/schemas/AdvancedFilter'
+      example:
+        amount:
+          - condition: greaterOrEqual
+            value: 100
+          - condition: lower
+            value: 500
+        status:
+          condition: in
+          value: [ "active", "pending" ]
+        createdAt:
+          condition: greater
+          value: "2024-01-01"
+
+    # --- Updated Request Schemas ---
+    SearchRecordsRequest:
+      type: object
+      required: [module]
+      properties:
+        module: { type: string }
+        filters:
+          type: object
+          additionalProperties: true
+          description: |
+            (Deprecated) Simple key-value filters. Use `advancedFilters` for complex queries.
+        advancedFilters:
+          $ref: '#/components/schemas/AdvancedFilters'
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+        sort:
+          type: object
+          additionalProperties:
+            type: integer
+            enum: [-1, 1]
+      description: |
+        Search records with support for both simple and advanced filtering.
+        - Use `filters` for legacy/simple queries: `{ "status": "active" }`
+        - Use `advancedFilters` for complex conditions (see AdvancedFilters schema).
+      examples:
+        simple:
+          summary: Simple filter
+          value:
+            module: customer
+            filters:
+              status: active
+            page: 1
+            limit: 50
+        advanced:
+          summary: Advanced filter
+          value:
+            module: customer
+            advancedFilters:
+              amount:
+                - condition: greaterOrEqual
+                  value: 100
+                - condition: lower
+                  value: 500
+              status:
+                condition: in
+                value: [ "active", "pending" ]
+              createdAt:
+                condition: greater
+                value: "2024-01-01"
+            page: 1
+            limit: 50
+
+    FindRecordRequest:
+      type: object
+      required: [module]
+      properties:
+        module: { type: string }
+        filters:
+          type: object
+          additionalProperties: true
+          description: |
+            (Deprecated) Simple key-value filters. Use `advancedFilters` for complex queries.
+        advancedFilters:
+          $ref: '#/components/schemas/AdvancedFilters'
+      description: |
+        Find a single record by filters.
+        - Use `filters` for legacy/simple queries.
+        - Use `advancedFilters` for advanced conditions.
+      examples:
+        simple:
+          summary: Simple filter
+          value:
+            module: customer
+            filters:
+              email: john@example.com
+        advanced:
+          summary: Advanced filter
+          value:
+            module: customer
+            advancedFilters:
+              email:
+                condition: equal
+                value: john@example.com
+
+    CountRecordsRequest:
+      type: object
+      required: [module]
+      properties:
+        module: { type: string }
+        filters:
+          type: object
+          additionalProperties: true
+          description: |
+            (Deprecated) Simple key-value filters. Use `advancedFilters` for complex queries.
+        advancedFilters:
+          $ref: '#/components/schemas/AdvancedFilters'
+      description: |
+        Count records matching filters.
+        - Use `filters` for legacy/simple queries.
+        - Use `advancedFilters` for advanced conditions.
+      examples:
+        simple:
+          summary: Simple filter
+          value:
+            module: customer
+            filters:
+              status: active
+        advanced:
+          summary: Advanced filter
+          value:
+            module: customer
+            advancedFilters:
+              status:
+                condition: notEqual
+                value: "archived"
+              amount:
+                condition: greater
+                value: 100
+    RecordResponse:
+      type: object
+      properties:
+        data:
+          type: object
+        meta:
+          $ref: '#/components/schemas/Meta'
+    SearchRecordsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+        meta:
+          $ref: '#/components/schemas/Meta'
+  responses:
+    Unauthorized:
+      description: Unauthorized - missing or invalid API key
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code: { type: string, example: UNAUTHORIZED }
+                  message: { type: string }
+                  details: {}
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code: { type: string, example: VALIDATION_ERROR }
+                  message: { type: string }
+                  details: {}
+    RateLimit:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code: { type: string, example: RATE_LIMIT_EXCEEDED }
+                  message: { type: string }
+                  details: {}
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code: { type: string, example: NOT_FOUND }
+                  message: { type: string }
+                  details: {}

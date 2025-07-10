@@ -1,0 +1,929 @@
+# InflowCRM Webhook API Documentation
+
+This document provides comprehensive documentation for InflowCRM's webhook subscription system, enabling real-time notifications when CRM data changes.
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Authentication & Security](#authentication--security)
+- [Webhook Events](#webhook-events)
+- [API Endpoints](#api-endpoints)
+- [Webhook Payloads](#webhook-payloads)
+- [HMAC Signature Verification](#hmac-signature-verification)
+- [Security Considerations](#security-considerations)
+- [Error Handling](#error-handling)
+- [Rate Limits & Quotas](#rate-limits--quotas)
+- [Best Practices](#best-practices)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## Overview
+
+InflowCRM webhooks allow your application to receive real-time notifications when data changes occur in your CRM. When a record is created, updated, or deleted, InflowCRM will send an HTTP POST request to your specified endpoint with the relevant data.
+
+### Key Features
+
+- **Real-time notifications** for create, update, and delete events
+- **HMAC-SHA256 signature verification** for security
+- **Automatic retries** with exponential backoff
+- **Module-specific subscriptions** for targeted notifications
+- **Comprehensive payload data** with field mappings
+- **Diff tracking** for update events
+
+### Supported Modules
+
+Webhooks are available for all standard InflowCRM modules:
+- `customer`
+- `task`
+- `contact`
+- `note`
+- `order`
+- `potential`
+- `event`
+- `enlist`
+- `coach`
+
+---
+
+## Authentication & Security
+
+### API Key Authentication
+
+All webhook subscription management endpoints require authentication via the `x-api-key` header.
+
+```bash
+curl -H "x-api-key: YOUR_API_KEY" https://srv.inflowcrm.pl/webhooks
+```
+
+### HMAC Signature Verification
+
+**Critical:** All webhook payloads are signed with HMAC-SHA256 for security. You **must** verify these signatures to ensure the request is from InflowCRM.
+
+#### Signature Header
+Each webhook request includes an `X-Webhook-Signature` header containing the HMAC signature:
+```
+X-Webhook-Signature: a1b2c3d4e5f6...
+```
+
+#### Verification Process
+1. Extract the signature from the `X-Webhook-Signature` header
+2. Compute HMAC-SHA256 of the raw request body using your webhook secret
+3. Compare computed signature with received signature
+
+**Example (Node.js):**
+```javascript
+const crypto = require('crypto');
+
+function verifyWebhookSignature(payload, signature, secret) {
+  const computed = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+  
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(computed)
+  );
+}
+
+// In your webhook handler
+app.post('/webhook', (req, res) => {
+  const signature = req.headers['x-webhook-signature'];
+  const payload = JSON.stringify(req.body);
+  
+  if (!verifyWebhookSignature(payload, signature, WEBHOOK_SECRET)) {
+    return res.status(401).send('Unauthorized');
+  }
+  
+  // Process webhook...
+  res.status(200).send('OK');
+});
+```
+
+**Example (Python):**
+```python
+import hmac
+import hashlib
+
+def verify_webhook_signature(payload, signature, secret):
+    computed = hmac.new(
+        secret.encode('utf-8'),
+        payload.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+    
+    return hmac.compare_digest(signature, computed)
+
+# In your webhook handler
+@app.route('/webhook', methods=['POST'])
+def webhook_handler():
+    signature = request.headers.get('X-Webhook-Signature')
+    payload = request.get_data(as_text=True)
+    
+    if not verify_webhook_signature(payload, signature, WEBHOOK_SECRET):
+        return 'Unauthorized', 401
+    
+    # Process webhook...
+    return 'OK', 200
+```
+
+---
+
+## Webhook Events
+
+InflowCRM supports three types of webhook events:
+
+| Event | Description | Triggered When |
+|-------|-------------|----------------|
+| `create` | Record creation | A new record is added to the module |
+| `update` | Record modification | An existing record is modified |
+| `delete` | Record deletion | A record is soft-deleted |
+
+---
+
+## API Endpoints
+
+### Base URL
+```
+https://srv.inflowcrm.pl
+```
+
+### Create Webhook Subscription
+
+**POST /webhooks/subscribe**
+
+Creates a new webhook subscription for a specific module and event.
+
+**Rate Limit:** 10 requests per hour per tenant
+
+**Headers:**
+```
+x-api-key: YOUR_API_KEY
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "event": "created",
+  "hookUrl": "https://your-app.com/webhook",
+  "module": "customer"
+}
+```
+
+**Parameters (Enhanced Validation):**
+- `event` (string, required): Event type (`created`, `updated`, or `deleted`)
+  - Must match pattern: `^[\w\-]{1,64}$` (alphanumeric, dashes, underscores only)
+- `hookUrl` (string, required): Your webhook endpoint URL (HTTPS strongly recommended)
+  - Must be valid HTTP/HTTPS URL, maximum 512 characters
+  - **SSRF Protection**: Blocks localhost, private IPs, and internal domains
+  - Only allows standard ports (80, 443)
+- `module` (string, required): Module name or canonical module identifier
+  - Must match pattern: `^[\w\-]{1,64}$`
+  - Validated against available modules in your bundle
+
+**Success Response (201):**
+```json
+{
+  "data": {
+    "id": "uuid-subscription-id"
+  }
+}
+```
+
+**Enhanced Error Responses:**
+
+**Validation Error (400):**
+```json
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "Validation failed",
+  "details": [
+    {
+      "field": "event",
+      "errors": ["event must be one of the allowed event types"]
+    },
+    {
+      "field": "hookUrl",
+      "errors": ["hookUrl must be a valid URL"]
+    }
+  ],
+  "errorId": "VALIDATION_ERROR"
+}
+```
+
+**SSRF Protection Error (400):**
+```json
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "Invalid hookUrl - must be a valid HTTP/HTTPS URL and not internal/private",
+  "errorId": "INVALID_URL"
+}
+```
+
+**Authorization Error (403):**
+```json
+{
+  "statusCode": 403,
+  "error": "Forbidden",
+  "message": "Insufficient permissions to manage webhooks",
+  "errorId": "FORBIDDEN"
+}
+```
+
+**Rate Limit Error (429):**
+```json
+{
+  "statusCode": 429,
+  "error": "Too Many Requests",
+  "message": "Rate limit exceeded for this operation. Please try again later.",
+  "details": null,
+  "errorId": "WEBHOOK_RATE_LIMIT_EXCEEDED"
+}
+```
+
+**Example:**
+```bash
+curl -X POST "https://srv.inflowcrm.pl/webhooks/subscribe" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event": "created",
+    "hookUrl": "https://your-app.com/webhook/customer-created",
+    "module": "customer"
+  }'
+```
+
+---
+
+### List Webhook Subscriptions
+
+**GET /webhooks**
+
+Returns all webhook subscriptions for your account with enhanced pagination metadata.
+
+**Rate Limit:** 100 requests per hour per tenant
+
+**Headers:**
+```
+x-api-key: YOUR_API_KEY
+```
+
+**Query Parameters (Enhanced Validation):**
+- `page` (integer, optional): Page number (default: 1, minimum: 1)
+- `perPage` (integer, optional): Records per page (default: 20, minimum: 1, maximum: 100)
+
+**Success Response (200):**
+```json
+{
+  "data": [
+    {
+      "subscriptionId": "uuid-subscription-id",
+      "eventName": "created",
+      "hookUrl": "https://your-app.com/webhook",
+      "module": "customer",
+      "createdAt": "2025-01-07T10:00:00Z",
+      "modifiedAt": "2025-01-07T10:00:00Z"
+    }
+  ],
+  "meta": {
+    "pagination": {
+      "page": 1,
+      "perPage": 20,
+      "total": 45,
+      "pages": 3,
+      "hasNext": true,
+      "hasPrev": false
+    }
+  }
+}
+```
+
+**Enhanced Pagination Metadata:**
+- `page`: Current page number
+- `perPage`: Items per page
+- `total`: Total number of webhook subscriptions
+- `pages`: Total number of pages
+- `hasNext`: Boolean indicating if there are more pages
+- `hasPrev`: Boolean indicating if there are previous pages
+
+**Resource Limits (NEW):**
+- Maximum 100 items per page (automatically enforced)
+- Page and perPage parameters are sanitized to safe bounds
+- Invalid pagination parameters return validation errors
+
+**Example:**
+```bash
+curl -H "x-api-key: YOUR_API_KEY" \
+  "https://srv.inflowcrm.pl/webhooks?page=1&perPage=20"
+```
+
+---
+
+### Get Webhook Subscription
+
+**GET /webhooks/{id}**
+
+Retrieves details of a specific webhook subscription with enhanced authorization.
+
+**Rate Limit:** 50 requests per hour per tenant
+
+**Headers:**
+```
+x-api-key: YOUR_API_KEY
+```
+
+**Path Parameters:**
+- `id` (string, required): Subscription ID (validated for proper format)
+
+**Success Response (200):**
+```json
+{
+  "data": {
+    "subscriptionId": "uuid-subscription-id",
+    "eventName": "created",
+    "hookUrl": "https://your-app.com/webhook",
+    "module": "customer",
+    "createdAt": "2025-01-07T10:00:00Z",
+    "modifiedAt": "2025-01-07T10:00:00Z"
+  }
+}
+```
+
+**Enhanced Error Responses:**
+
+**Not Found (404):**
+```json
+{
+  "statusCode": 404,
+  "error": "Not Found",
+  "message": "Webhook subscription not found",
+  "errorId": "NOT_FOUND"
+}
+```
+
+**Missing ID Parameter (400):**
+```json
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "id param is required",
+  "errorId": "VALIDATION_ERROR"
+}
+```
+
+**Example:**
+```bash
+curl -H "x-api-key: YOUR_API_KEY" \
+  "https://srv.inflowcrm.pl/webhooks/uuid-subscription-id"
+```
+
+---
+
+### Delete Webhook Subscription
+
+**DELETE /webhooks/{id}**
+
+Removes a webhook subscription with enhanced authorization and validation.
+
+**Rate Limit:** 50 requests per hour per tenant
+
+**Headers:**
+```
+x-api-key: YOUR_API_KEY
+```
+
+**Path Parameters:**
+- `id` (string, required): Subscription ID (validated for proper format)
+
+**Success Response (200):**
+```json
+{
+  "data": {
+    "deleted": true
+  }
+}
+```
+
+**Enhanced Error Responses:**
+
+**Not Found (404):**
+```json
+{
+  "statusCode": 404,
+  "error": "Not Found",
+  "message": "Webhook subscription not found",
+  "errorId": "NOT_FOUND"
+}
+```
+
+**Missing ID Parameter (400):**
+```json
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "id param is required",
+  "errorId": "VALIDATION_ERROR"
+}
+```
+
+**Authorization Error (403):**
+```json
+{
+  "statusCode": 403,
+  "error": "Forbidden",
+  "message": "Insufficient permissions to manage webhooks",
+  "errorId": "FORBIDDEN"
+}
+```
+
+**Example:**
+```bash
+curl -X DELETE \
+  -H "x-api-key: YOUR_API_KEY" \
+  "https://srv.inflowcrm.pl/webhooks/uuid-subscription-id"
+```
+
+---
+
+## Webhook Payloads
+
+### Payload Structure
+
+All webhook payloads follow this structure:
+
+```json
+{
+  "event": "create|update|delete",
+  "module": "customer",
+  "data": {
+    // Record data with API field names
+  },
+  "diff": [
+    // Only present for update events
+    {
+      "path": "fieldName",
+      "from": "oldValue",
+      "to": "newValue"
+    }
+  ]
+}
+```
+
+### Create Event Payload
+
+**Event:** When a new record is created
+
+```json
+{
+  "event": "create",
+  "module": "customer",
+  "data": {
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "phone": "+1234567890",
+    "company": "507f1f77bcf86cd799439011",
+    "status": "active",
+    "createdAt": "2025-01-07T10:00:00Z"
+  }
+}
+```
+
+### Update Event Payload
+
+**Event:** When an existing record is modified
+
+```json
+{
+  "event": "update",
+  "module": "customer",
+  "data": {
+    "name": "John Smith",
+    "email": "john.smith@example.com",
+    "phone": "+1234567890",
+    "company": "507f1f77bcf86cd799439011",
+    "status": "active",
+    "modifiedAt": "2025-01-07T10:30:00Z"
+  },
+  "diff": [
+    {
+      "path": "name",
+      "from": "John Doe",
+      "to": "John Smith"
+    },
+    {
+      "path": "email",
+      "from": "john.doe@example.com",
+      "to": "john.smith@example.com"
+    }
+  ]
+}
+```
+
+### Delete Event Payload
+
+**Event:** When a record is deleted (soft delete)
+
+```json
+{
+  "event": "delete",
+  "module": "customer",
+  "data": {
+    "deleted": true,
+    "id": "507f1f77bcf86cd799439011"
+  }
+}
+```
+
+### Field Mapping
+
+> **Important:** Only fields with an **'Api field name'** set in the InflowCRM UI will be included in webhook payloads.
+
+- **Custom fields** are flattened to the root level using their API field names
+- **Relation fields** contain the referenced record's ID
+- **File fields** are excluded from webhook payloads for security
+- **System fields** like `_id`, `master`, `deleted`, `__v` are filtered out
+
+---
+
+## HMAC Signature Verification
+
+### Algorithm Details
+
+- **Hash Function:** SHA-256
+- **Encoding:** Hexadecimal
+- **Header:** `X-Webhook-Signature`
+- **Input:** Raw JSON string of the request body
+
+### Security Requirements
+
+⚠️ **Security Warning:** Always verify HMAC signatures to prevent malicious requests.
+
+1. **Use timing-safe comparison** to prevent timing attacks
+2. **Hash the raw request body** exactly as received
+3. **Store webhook secrets securely** (environment variables, secrets manager)
+4. **Reject requests with invalid signatures** immediately
+
+### Implementation Examples
+
+**Express.js with raw body parsing:**
+```javascript
+const express = require('express');
+const crypto = require('crypto');
+
+app.use('/webhook', express.raw({ type: 'application/json' }));
+
+app.post('/webhook', (req, res) => {
+  const signature = req.headers['x-webhook-signature'];
+  const payload = req.body.toString();
+  
+  const computed = crypto
+    .createHmac('sha256', process.env.WEBHOOK_SECRET)
+    .update(payload)
+    .digest('hex');
+  
+  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(computed))) {
+    return res.status(401).send('Invalid signature');
+  }
+  
+  const data = JSON.parse(payload);
+  // Process webhook data...
+  
+  res.status(200).send('OK');
+});
+```
+
+**Flask with raw request data:**
+```python
+from flask import Flask, request
+import hmac
+import hashlib
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    signature = request.headers.get('X-Webhook-Signature')
+    payload = request.get_data()
+    
+    computed = hmac.new(
+        WEBHOOK_SECRET.encode(),
+        payload,
+        hashlib.sha256
+    ).hexdigest()
+    
+    if not hmac.compare_digest(signature, computed):
+        return 'Invalid signature', 401
+    
+    data = request.get_json()
+    # Process webhook data...
+    
+    return 'OK', 200
+```
+
+---
+
+## Security Considerations
+
+### URL Validation
+
+InflowCRM validates webhook URLs to prevent security issues:
+
+- **Protocol:** Only `http://` and `https://` allowed (HTTPS strongly recommended)
+- **Ports:** Only standard ports (80, 443) are allowed
+- **Private IPs:** Blocked (10.x.x.x, 192.168.x.x, 172.16-31.x.x)
+- **Localhost:** Blocked (127.0.0.1, localhost, ::1)
+- **Internal domains:** Blocked (.internal, .local, .lan)
+
+### Best Practices
+
+1. **Use HTTPS endpoints** to protect data in transit
+2. **Verify HMAC signatures** on every request
+3. **Implement idempotency** to handle duplicate webhooks
+4. **Use exponential backoff** for retries on your side
+5. **Log webhook events** for debugging and monitoring
+6. **Validate payload structure** before processing
+7. **Handle webhook timeouts gracefully** (respond within 30 seconds)
+
+### Network Security
+
+- Configure firewalls to allow InflowCRM webhook IPs
+- Use webhook secrets as an additional authentication layer
+- Monitor for suspicious webhook activity
+- Implement rate limiting on your webhook endpoints
+
+---
+
+## Error Handling
+
+### Common Error Responses
+
+**Invalid API Key (401):**
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid API key"
+  }
+}
+```
+
+**Validation Error (400):**
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid hookUrl - must be a valid HTTP/HTTPS URL and not internal/private"
+  }
+}
+```
+
+**Subscription Limit Reached (400):**
+```json
+{
+  "error": {
+    "code": "SUBSCRIPTION_LIMIT_REACHED",
+    "message": "Subscription limit (10) reached for module 'customer' event 'create'"
+  }
+}
+```
+
+**Duplicate Subscription (400):**
+```json
+{
+  "error": {
+    "code": "HOOK_ALREADY_EXISTS",
+    "message": "Webhook subscription already exists for this hookUrl, module and event"
+  }
+}
+```
+
+**Module Not Found (400):**
+```json
+{
+  "error": {
+    "code": "MODULE_NOT_FOUND",
+    "message": "Module 'invalid-module' not found"
+  }
+}
+```
+
+**Subscription Not Found (404):**
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Webhook subscription not found"
+  }
+}
+```
+
+### Webhook Delivery Failures
+
+If your webhook endpoint:
+- Returns non-2xx HTTP status codes
+- Times out (>30 seconds)
+- Is unreachable
+
+InflowCRM will:
+1. Log the failure
+2. Retry with exponential backoff
+3. Eventually disable the subscription after repeated failures
+
+---
+
+## Rate Limits & Quotas
+
+### API Rate Limits (NEW)
+
+Enhanced operation-specific rate limits are now enforced per tenant (API key + IP):
+
+- **Subscribe Operations**: 10 requests per hour
+- **List Operations**: 100 requests per hour
+- **Get/Delete Operations**: 50 requests per hour
+
+**Rate Limit Headers:**
+All webhook API responses include standard rate limit headers:
+```
+RateLimit-Limit: 10
+RateLimit-Remaining: 9
+RateLimit-Reset: 1641024000
+```
+
+**Rate Limit Exceeded Response:**
+```json
+{
+  "statusCode": 429,
+  "error": "Too Many Requests",
+  "message": "Rate limit exceeded for this operation. Please try again later.",
+  "details": null,
+  "errorId": "WEBHOOK_RATE_LIMIT_EXCEEDED"
+}
+```
+
+### Subscription Limits
+- **Maximum 10 subscriptions** per module/event combination
+- No limit on total number of subscriptions across different modules/events
+- **Resource Limits**: Pagination limited to maximum 100 items per page
+
+### Enhanced Validation (NEW)
+
+**Input Validation:**
+- **Event names**: Must match `^[\w\-]{1,64}$` pattern (alphanumeric, dashes, underscores only)
+- **Hook URLs**: Must be valid HTTP/HTTPS URLs, maximum 512 characters
+- **Module names**: Must match `^[\w\-]{1,64}$` pattern, validated against available modules
+
+**URL Security (SSRF Protection):**
+- Blocks localhost and loopback addresses (127.0.0.1, ::1, localhost)
+- Blocks private IP ranges (10.x.x.x, 192.168.x.x, 172.16-31.x.x)
+- Blocks internal hostnames (.internal, .local, .lan)
+- Only allows standard ports (80, 443)
+- Only allows HTTP/HTTPS protocols
+
+### Authorization Enhancement (NEW)
+
+**Permission Requirements:**
+- Users must have `webhook:manage` permission
+- Tenant context (`master`) is required for all operations
+- All operations are isolated by tenant
+
+**Authorization Errors:**
+```json
+{
+  "statusCode": 403,
+  "error": "Forbidden",
+  "message": "Insufficient permissions to manage webhooks",
+  "errorId": "FORBIDDEN"
+}
+```
+
+### Webhook Delivery
+- **No rate limits** on webhook deliveries to your endpoints
+- **30-second timeout** for webhook HTTP requests
+- **Automatic retries** with exponential backoff on failures
+
+---
+
+## Best Practices
+
+### Endpoint Implementation
+
+1. **Respond quickly** (< 30 seconds)
+2. **Return 2xx status codes** for successful processing
+3. **Implement idempotency** using webhook IDs or timestamps
+4. **Log all webhook events** for debugging
+5. **Process asynchronously** for complex operations
+
+**Example implementation:**
+```javascript
+app.post('/webhook', async (req, res) => {
+  // Verify signature first
+  if (!verifySignature(req)) {
+    return res.status(401).send('Unauthorized');
+  }
+  
+  // Respond immediately
+  res.status(200).send('OK');
+  
+  // Process asynchronously
+  setImmediate(async () => {
+    try {
+      await processWebhookData(req.body);
+    } catch (error) {
+      console.error('Webhook processing failed:', error);
+    }
+  });
+});
+```
+
+### Error Handling
+
+1. **Graceful degradation** when webhook processing fails
+2. **Retry mechanisms** for transient failures
+3. **Dead letter queues** for failed webhook processing
+4. **Monitoring and alerting** for webhook failures
+
+### Data Processing
+
+1. **Validate payload structure** before processing
+2. **Check for required fields** based on your needs
+3. **Handle missing API field names** gracefully
+4. **Use diff data** for efficient update processing
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+**Webhook not triggered:**
+- Verify the subscription exists: `GET /webhooks`
+- Check the module and event names match exactly
+- Ensure the record change actually occurred
+- Check InflowCRM logs for delivery attempts
+
+**Signature verification fails:**
+- Verify you're using the raw request body
+- Check the HMAC secret is correct
+- Ensure you're using SHA-256 algorithm
+- Use timing-safe comparison functions
+
+**Endpoint not receiving webhooks:**
+- Verify the URL is publicly accessible
+- Check firewall and security group settings
+- Ensure the endpoint returns 2xx status codes
+- Test with a simple webhook testing tool
+
+**Missing field data:**
+- Verify fields have 'Api field name' set in InflowCRM UI
+- Check the module field configuration
+- Review webhook payload structure
+
+### Debug Tools
+
+**Test webhook delivery:**
+```bash
+# Use services like webhook.site for testing
+curl -X POST "https://srv.inflowcrm.pl/webhooks/subscribe" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event": "create",
+    "hookUrl": "https://webhook.site/your-unique-url",
+    "module": "customer"
+  }'
+```
+
+**Verify signature generation:**
+```javascript
+const crypto = require('crypto');
+const payload = '{"event":"create","module":"customer","data":{"name":"Test"}}';
+const secret = 'your-webhook-secret';
+const signature = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+console.log('Expected signature:', signature);
+```
+
+### Support
+
+For webhook-related issues:
+1. Check the webhook subscription status
+2. Review your endpoint logs
+3. Verify HMAC signature implementation
+4. Test with minimal webhook handlers
+5. Contact InflowCRM support with specific error details
+
+---
+
+## Further Reading
+
+- [Main API Documentation](./README.md)
+- [Endpoints Reference](./endpoints.md)
+- [Error Handling](./errors.md)
+- [Security Best Practices](./security.md)
+
+---
+
+*Last updated: January 2025*
