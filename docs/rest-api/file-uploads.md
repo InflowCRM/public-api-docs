@@ -4,17 +4,17 @@ This guide explains how to upload files using the Public API, including multipar
 
 ---
 
-## Supported Endpoints
+## 📦 Supported Endpoints
 
 - `POST /api/createRecord`
 - `PATCH /api/updateRecord/{id}`
 
-File uploads are only supported for modules with file-type fields.  
+File uploads are only supported for modules with file-type fields.
 Maximum: **10 files per request**, **15MB per file**.
 
 ---
 
-## Multipart Form-Data Example
+## 📝 Multipart Form-Data Example
 
 > **Important:** All fields must be sent as top-level form fields. **Do not nest fields under `data`.**
 > **Only fields with an 'Api field name' set in the InflowCRM UI can be used in the API.**
@@ -68,7 +68,7 @@ response = requests.post(
 
 ---
 
-## File Field Validation
+## ✅ File Field Validation
 
 - Only fields defined as file-type in the module schema are accepted.
 - Each file field must match the API field name.
@@ -79,7 +79,7 @@ response = requests.post(
 
 ---
 
-## Response Example
+## 📋 Response Example
 
 ```json
 {
@@ -90,21 +90,21 @@ response = requests.post(
 
 ---
 
-## Troubleshooting
+## 🛠️ Troubleshooting
 
-- **Validation error:**  
+- **Validation error:**
   Check that all file fields exist in the module and match the API field names.
-- **File too large:**  
+- **File too large:**
   Ensure each file is under 15MB.
-- **Too many files:**  
+- **Too many files:**
   Limit to 10 files per request.
-- **Unsupported field:**  
+- **Unsupported field:**
   Only file-type fields are accepted for uploads.
-- **Authentication error:**  
+- **Authentication error:**
   Ensure your API key is valid and included in the `x-api-key` header.
-- **Rate limit error:**  
+- **Rate limit error:**
   Wait and retry if you receive HTTP 429.
 
 ---
 
-For more details on modules and field types, see [modules.md](./modules.md).
+_For more details on modules and field types, see [modules.md](./modules.md)._

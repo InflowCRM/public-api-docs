@@ -7,7 +7,7 @@ This document describes all modules supported by the Public API, their field typ
 
 ---
 
-## Supported Modules
+## 📦 Supported Modules
 
 - **customer**
 - **task**
@@ -25,9 +25,9 @@ Only modules available in your bundle can be accessed.
 
 ---
 
-## Module Field Types
+## 📝 Module Field Types
 
-Each module has a set of fields with specific types and requirements.  
+Each module has a set of fields with specific types and requirements.
 Common field types:
 
 | Type        | Description                        | Example Value         |
@@ -43,7 +43,7 @@ Common field types:
 
 ---
 
-## Field Requirements
+## ✅ Field Requirements
 
 - **required**: Field must be present in `data`
 - **readonly**: Field cannot be set via API
@@ -53,16 +53,16 @@ Common field types:
 
 ---
 
-## Example: Get Module Fields
+## 📋 Example: Get Module Fields
 
-Request:
+**Request:**
 ```json
 {
   "module": "customer"
 }
 ```
 
-Response:
+**Response:**
 ```json
 {
   "data": [
@@ -96,11 +96,11 @@ Response:
 
 ---
 
-## Relationship Fields
+## 🔗 Relationship Fields
 
 - Use the related module's record ID as the value.
 - Example: To set a contact's company, provide the company record's ID.
 
 ---
 
-For a full list of fields per module, use the `/api/getModuleFields` endpoint.
+_For a full list of fields per module, use the `/api/getModuleFields` endpoint._

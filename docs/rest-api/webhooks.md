@@ -4,7 +4,7 @@ This document provides comprehensive documentation for InflowCRM's webhook subsc
 
 ---
 
-## Table of Contents
+## 📑 Table of Contents
 
 - [Overview](#overview)
 - [Authentication & Security](#authentication--security)
@@ -19,6 +19,8 @@ This document provides comprehensive documentation for InflowCRM's webhook subsc
 - [Troubleshooting](#troubleshooting)
 
 ---
+
+_Navigate using the sidebar or this table of contents. Each section covers a key aspect of webhook integration._
 
 ## Overview
 

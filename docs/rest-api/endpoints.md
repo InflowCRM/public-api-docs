@@ -4,7 +4,7 @@ This section provides detailed documentation for every public API endpoint, incl
 
 ---
 
-## Table of Contents
+## 📑 Table of Contents
 
 ### Core API Endpoints
 - [GET /api/getBundleModuleNames](#get-apigetbundlemodulenames)
@@ -26,6 +26,8 @@ This section provides detailed documentation for every public API endpoint, incl
 - [DELETE /webhooks/{id}](#delete-webhooksid)
 
 ---
+
+_Navigate using the sidebar or this table of contents. All endpoints are grouped by function for easier browsing._
 
 ## GET /api/getBundleModuleNames
 

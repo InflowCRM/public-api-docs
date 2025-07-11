@@ -1,102 +1,40 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>InflowCRM Public API Docs</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Favicon: Place a local favicon.ico in the root directory for best results -->
-  <link rel="icon" href="favicon.ico" type="image/x-icon">
-  <meta name="description" content="InflowCRM Public API Documentation - Comprehensive, searchable, and beautifully presented.">
-  <meta property="og:title" content="InflowCRM API Docs">
-  <meta property="og:description" content="Comprehensive documentation for the InflowCRM Public API.">
-  <meta property="og:type" content="website">
-  <meta property="og:image" content="favicon.ico">
-  <style>
-    :root {
-      --theme-color: #1a73e8;
-      --sidebar-width: 270px;
-      --sidebar-bg: #f8fafc;
-      --sidebar-border: #e0e0e0;
-    }
-    body {
-      background: #f5f7fa;
-      font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
-    }
-    .sidebar {
-      font-size: 16px;
-      background: var(--sidebar-bg);
-      border-right: 1px solid var(--sidebar-border);
-      width: var(--sidebar-width);
-    }
-    .markdown-section {
-      max-width: 900px;
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-      padding: 2.5rem 2rem;
-      margin: 2rem auto;
-    }
-    .app-name-link img {
-      border-radius: 6px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    }
-    .docsify-copy-code-button {
-      background: var(--theme-color);
-      color: #fff;
-      border-radius: 4px;
-      font-size: 0.95em;
-    }
-    .search input {
-      border-radius: 4px;
-      border: 1px solid #d0d7de;
-      padding: 0.5em 1em;
-    }
-  </style>
+  <title>API Documentation</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="description" content="Description">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  
+  <link rel="icon" href="inflowcrm.png" type="image/png">
+  <!-- Themes (light + dark) -->
+  <link rel="stylesheet" media="(prefers-color-scheme: dark)" href="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/css/theme-simple-dark.css">
+  <link rel="stylesheet" media="(prefers-color-scheme: light)" href="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/css/theme-simple.css">
+
 </head>
 <body>
   <div id="app"></div>
   <script>
     window.$docsify = {
-      name: 'InflowCRM API',
-      repo: 'arqo/inflowcrm-public-api-docs',
+      name: 'InflowCRM API Documentation',
+      logo: 'inflowcrm.png',
+      repo: 'https://github.com/InflowCRM/public-api-docs',
       loadSidebar: true,
-      subMaxLevel: 2,
-      search: {
-        maxAge: 86400000,
-        placeholder: 'Search API docs...',
-        noData: 'No results!',
-        depth: 3
-      },
-      coverpage: false,
-      themeColor: '#1a73e8',
-      auto2top: true,
-      alias: {
-        '/.*/_sidebar.md': '/_sidebar.md'
-      },
-      pagination: {
-        previousText: 'Previous',
-        nextText: 'Next',
-        crossChapter: true,
-        crossChapterText: true,
-      },
-      copyCode: {
-        buttonText: 'Copy',
-        errorText: 'Error',
-        successText: 'Copied!'
-      },
-      plugins: [
-        function(hook) {
-          hook.doneEach(function() {
-            // Custom scripts or analytics can be added here
-          });
-        }
-      ]
-    }
+      homepage: 'README.md',
+      themeable: {
+        readyTransition : true,
+        responsiveTables: true
+      }
+    };
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/docsify@4"></script>
-  <script src="https://cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/docsify-copy-code"></script>
-  <script src="https://cdn.jsdelivr.net/npm/docsify-pagination/dist/docsify-pagination.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/docsify/lib/plugins/zoom-image.min.js"></script>
+  
+  <!-- Required -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/docsify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/js/docsify-themeable.min.js"></script>
+  
+  <!-- Recommended -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/plugins/search.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/plugins/zoom-image.min.js"></script>
 </body>
 </html>

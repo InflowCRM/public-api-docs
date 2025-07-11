@@ -4,7 +4,7 @@ This document explains error responses, status codes, and common error scenarios
 
 ---
 
-## Error Response Structure
+## 📦 Error Response Structure
 
 All errors use a consistent format:
 
@@ -20,7 +20,7 @@ All errors use a consistent format:
 
 ---
 
-## HTTP Status Codes
+## 🏷️ HTTP Status Codes
 
 | Code | Meaning                  | When Returned                        |
 |------|--------------------------|--------------------------------------|
@@ -35,7 +35,7 @@ All errors use a consistent format:
 
 ---
 
-## Common Error Codes
+## 🗂️ Common Error Codes
 
 | Code                  | Description                                  |
 |-----------------------|----------------------------------------------|
@@ -48,7 +48,7 @@ All errors use a consistent format:
 
 ---
 
-## Rate Limiting
+## 🚦 Rate Limiting
 
 - **Limit:** 300 requests per 5-minute window per (API key + IP)
 - **Error:** HTTP 429 with code `RATE_LIMIT_EXCEEDED`
@@ -66,13 +66,13 @@ All errors use a consistent format:
 
 ---
 
-## Deprecation Warnings
+## ⚠️ Deprecation Warnings
 
 Deprecated `/integration/*` endpoints return a deprecation warning in the `meta.deprecation` field.
 
 ---
 
-## Troubleshooting
+## 🛠️ Troubleshooting
 
 - **Validation errors:** Check request body and field types.
   > **Note:** Only fields with an **'Api field name'** set in the InflowCRM UI can be used in the API.
@@ -82,4 +82,4 @@ Deprecated `/integration/*` endpoints return a deprecation warning in the `meta.
 
 ---
 
-For more details, see [README.md](./README.md) and [endpoints.md](./endpoints.md).
+_For more details, see [README.md](./README.md) and [endpoints.md](./endpoints.md)._
