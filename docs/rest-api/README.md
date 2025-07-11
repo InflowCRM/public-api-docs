@@ -1,6 +1,6 @@
 # InflowCRM Public API Documentation
 
-![InflowCRM Logo](https://raw.githubusercontent.com/arqo/inflowcrm-public-api-docs/main/logo.png)
+![InflowCRM Logo](../../logo.png)
 
 ---
 
