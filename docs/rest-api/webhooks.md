@@ -105,32 +105,6 @@ app.post('/webhook', (req, res) => {
 });
 ```
 
-**Example (Python):**
-```python
-import hmac
-import hashlib
-
-def verify_webhook_signature(payload, signature, secret):
-    computed = hmac.new(
-        secret.encode('utf-8'),
-        payload.encode('utf-8'),
-        hashlib.sha256
-    ).hexdigest()
-    
-    return hmac.compare_digest(signature, computed)
-
-# In your webhook handler
-@app.route('/webhook', methods=['POST'])
-def webhook_handler():
-    signature = request.headers.get('X-Webhook-Signature')
-    payload = request.get_data(as_text=True)
-    
-    if not verify_webhook_signature(payload, signature, WEBHOOK_SECRET):
-        return 'Unauthorized', 401
-    
-    # Process webhook...
-    return 'OK', 200
-```
 
 ---
 
@@ -309,7 +283,7 @@ x-api-key: YOUR_API_KEY
 - `hasNext`: Boolean indicating if there are more pages
 - `hasPrev`: Boolean indicating if there are previous pages
 
-**Resource Limits (NEW):**
+**Resource Limits:**
 - Maximum 100 items per page (automatically enforced)
 - Page and perPage parameters are sanitized to safe bounds
 - Invalid pagination parameters return validation errors
@@ -593,31 +567,6 @@ app.post('/webhook', (req, res) => {
 });
 ```
 
-**Flask with raw request data:**
-```python
-from flask import Flask, request
-import hmac
-import hashlib
-
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    signature = request.headers.get('X-Webhook-Signature')
-    payload = request.get_data()
-    
-    computed = hmac.new(
-        WEBHOOK_SECRET.encode(),
-        payload,
-        hashlib.sha256
-    ).hexdigest()
-    
-    if not hmac.compare_digest(signature, computed):
-        return 'Invalid signature', 401
-    
-    data = request.get_json()
-    # Process webhook data...
-    
-    return 'OK', 200
-```
 
 ---
 
@@ -732,7 +681,7 @@ InflowCRM will:
 
 ## Rate Limits & Quotas
 
-### API Rate Limits (NEW)
+### API Rate Limits
 
 Enhanced operation-specific rate limits are now enforced per tenant (API key + IP):
 
@@ -764,7 +713,7 @@ RateLimit-Reset: 1641024000
 - No limit on total number of subscriptions across different modules/events
 - **Resource Limits**: Pagination limited to maximum 100 items per page
 
-### Enhanced Validation (NEW)
+### Enhanced Validation
 
 **Input Validation:**
 - **Event names**: Must match `^[\w\-]{1,64}$` pattern (alphanumeric, dashes, underscores only)

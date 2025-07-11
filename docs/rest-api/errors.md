@@ -66,9 +66,6 @@ All errors use a consistent format:
 
 ---
 
-## ⚠️ Deprecation Warnings
-
-Deprecated `/integration/*` endpoints return a deprecation warning in the `meta.deprecation` field.
 
 ---
 

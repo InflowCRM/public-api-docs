@@ -44,27 +44,6 @@ fetch('https://srv.inflowcrm.pl/api/createRecord', {
 });
 ```
 
-**Request (Python, requests):**
-```python
-import requests
-
-files = {
-    'profilePicture': open('/path/to/photo.jpg', 'rb')
-}
-data = {
-    'module': 'customer',
-    'name': 'John Doe',
-    'email': 'john@example.com'
-}
-headers = { 'x-api-key': 'YOUR_API_KEY' }
-
-response = requests.post(
-    'https://srv.inflowcrm.pl/api/createRecord',
-    headers=headers,
-    data=data,
-    files=files
-)
-```
 
 ---
 
