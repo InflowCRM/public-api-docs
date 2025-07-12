@@ -19,3 +19,6 @@
 - [🚦 Filtering](docs/graphql/filtering.md)
 - [🧰 Best Practices](docs/graphql/best-practices.md)
 - [❌ Errors](docs/graphql/errors.md)
+
+**Integrations**
+- [🔗 n8n Community Node](docs/n8n-node.md)

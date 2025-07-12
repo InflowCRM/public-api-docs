@@ -12,5 +12,8 @@ We offer two types of APIs to meet the diverse needs of developers:
 
 - **[REST API](docs/rest-api/README.md)**: A classic and simple-to-use API, ideal for most applications.
 - **[GraphQL API](docs/graphql/README.md)**: A flexible and efficient API that allows for precise data queries.
+- **[n8n Community Node](docs/n8n-node.md)**: Integrate Inflow CRM with n8n workflows using the official community node.
 
 Choose the API that best suits your project and start building!
+
+---
