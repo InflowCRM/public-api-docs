@@ -1,0 +1,21 @@
+name: Validate OpenAPI
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docs/rest-api/openapi.yaml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Spectral
+        run: npm install -g @stoplight/spectral-cli
+
+      - name: Run Spectral lint
+        run: spectral lint docs/rest-api/openapi.yaml
