@@ -19,12 +19,6 @@ This section provides detailed documentation for every public API endpoint, incl
 - [POST /api/records/count](#post-apirecordscount)
 - [DELETE /api/{module}/{id}](#delete-apimoduleid)
 
-### Webhook Endpoints
-- [POST /webhooks/subscribe](#post-webhookssubscribe)
-- [GET /webhooks](#get-webhooks)
-- [GET /webhooks/{id}](#get-webhooksid)
-- [DELETE /webhooks/{id}](#delete-webhooksid)
-
 ---
 
 _Navigate using the sidebar or this table of contents. All endpoints are grouped by function for easier browsing._
@@ -210,19 +204,22 @@ Searches records with filters and pagination.
   "sort": { "createdAt": -1 }
 }
 ```
+> **Note:** Sorting can only be performed on a single field at a time.
 
 **Body (Advanced filter):**
 ```json
 {
   "module": "customer",
-  "advancedFilters": {
-    "amount": [
-      { "condition": "greaterOrEqual", "value": 100 },
-      { "condition": "lower", "value": 500 }
-    ],
-    "status": { "condition": "in", "value": ["active", "pending"] },
-    "createdAt": { "condition": "greater", "value": "2024-01-01" }
-  },
+  "advancedFilters": [
+    {
+      "conditions": [
+        { "field": "amount", "condition": "greaterOrEqual", "value": 100 },
+        { "field": "amount", "condition": "lower", "value": 500 },
+        { "field": "status", "condition": "in", "value": ["active", "pending"] },
+        { "field": "createdAt", "condition": "greater", "value": "2024-01-01" }
+      ]
+    }
+  ],
   "page": 1,
   "limit": 50
 }
@@ -259,23 +256,32 @@ The `advancedFilters` property enables complex queries using supported condition
 **Example:**
 ```json
 {
-  "advancedFilters": {
-    "amount": [
-      { "condition": "greaterOrEqual", "value": 100 },
-      { "condition": "lower", "value": 500 }
-    ],
-    "status": { "condition": "in", "value": ["active", "pending"] }
-  }
+  "advancedFilters": [
+    {
+      "conditions": [
+        { "field": "amount", "condition": "greaterOrEqual", "value": 100 },
+        { "field": "amount", "condition": "lower", "value": 500 }
+      ]
+    },
+    {
+      "conditions": [
+        { "field": "status", "condition": "in", "value": ["active", "pending"] }
+      ]
+    }
+  ]
 }
 ```
 
 **Combining Conditions:**
-Multiple conditions for a field are combined with logical AND.
-To filter by OR across fields, use multiple fields in `advancedFilters`.
+The `advancedFilters` parameter accepts an array of condition groups.
+- All conditions within a single group (inside the `conditions` array) are combined with a logical **AND**.
+- Multiple condition groups in the top-level `advancedFilters` array are combined with a logical **OR**.
+
+This allows for building complex queries, such as `(condition1 AND condition2) OR (condition3)`.
 
 **Migration Guide:**
 - **Simple:** `{ "filters": { "status": "active" } }`
-- **Advanced:** `{ "advancedFilters": { "status": { "condition": "equal", "value": "active" } } }`
+- **Advanced:** `{ "advancedFilters": [{ "conditions": [{ "field": "status", "condition": "equal", "value": "active" }] }] }`
 - Both can be used for backward compatibility.
 
 **Error Handling:**
@@ -318,9 +324,13 @@ Finds a single record by filters.
 ```json
 {
   "module": "customer",
-  "advancedFilters": {
-    "email": { "condition": "equal", "value": "john@example.com" }
-  }
+  "advancedFilters": [
+    {
+      "conditions": [
+        { "field": "email", "condition": "equal", "value": "john@example.com" }
+      ]
+    }
+  ]
 }
 ```
 
@@ -353,11 +363,18 @@ Returns metadata for all fields in a module.
 {
   "data": [
     {
-      "fieldId": "cf1",
       "apiFieldName": "email",
+      "description": "User's email address",
+      "decimal": null,
+      "length": 255,
       "type": "string",
       "label": "Email",
-      "required": true
+      "required": true,
+      "relationField": null,
+      "pickListValues": [],
+      "relatedModule": null,
+      "relationFieldName": null,
+      "defaultValue": null
     }
   ],
   "meta": { "deprecation": null }
@@ -409,10 +426,14 @@ Counts records matching filters.
 ```json
 {
   "module": "customer",
-  "advancedFilters": {
-    "status": { "condition": "notEqual", "value": "archived" },
-    "amount": { "condition": "greater", "value": 100 }
-  }
+  "advancedFilters": [
+    {
+      "conditions": [
+        { "field": "status", "condition": "notEqual", "value": "archived" },
+        { "field": "amount", "condition": "greater", "value": 100 }
+      ]
+    }
+  ]
 }
 ```
 
@@ -450,188 +471,5 @@ HTTP 204 No Content
 - File uploads are only supported on modules with file-type fields.
 
 > For more details on file uploads, see [file-uploads.md](./file-uploads.md).
-
----
-
-## POST /webhooks/subscribe
-
-Creates a new webhook subscription for a specific module and event.
-
-**Headers:**
-```
-x-api-key: YOUR_API_KEY
-Content-Type: application/json
-```
-
-**Request Body:**
-```json
-{
-  "event": "create",
-  "hookUrl": "https://your-app.com/webhook",
-  "module": "customer"
-}
-```
-
-**Parameters:**
-- `event` (string, required): Event type (`create`, `update`, or `delete`)
-- `hookUrl` (string, required): Your webhook endpoint URL (HTTPS recommended)
-- `module` (string, required): Module name or canonical module identifier
-
-**Response:**
-```json
-{
-  "data": {
-    "id": "uuid-subscription-id"
-  }
-}
-```
-
-**Example:**
-```bash
-curl -X POST "https://srv.inflowcrm.pl/webhooks/subscribe" \
-  -H "x-api-key: YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "event": "create",
-    "hookUrl": "https://your-app.com/webhook/customer-created",
-    "module": "customer"
-  }'
-```
-
----
-
-## GET /webhooks
-
-Returns all webhook subscriptions for your account.
-
-**Headers:**
-```
-x-api-key: YOUR_API_KEY
-```
-
-**Query Parameters:**
-- `page` (integer, optional): Page number (default: 1)
-- `perPage` (integer, optional): Records per page (default: 20, max: 100)
-
-**Response:**
-```json
-{
-  "data": [
-    {
-      "subscriptionId": "uuid-subscription-id",
-      "eventName": "create",
-      "hookUrl": "https://your-app.com/webhook",
-      "module": "customer",
-      "createdAt": "2025-01-07T10:00:00Z",
-      "modifiedAt": "2025-01-07T10:00:00Z"
-    }
-  ]
-}
-```
-
-**Example:**
-```bash
-curl -H "x-api-key: YOUR_API_KEY" \
-  "https://srv.inflowcrm.pl/webhooks?page=1&perPage=20"
-```
-
----
-
-## GET /webhooks/{id}
-
-Retrieves details of a specific webhook subscription.
-
-**Headers:**
-```
-x-api-key: YOUR_API_KEY
-```
-
-**Path Parameters:**
-- `id` (string, required): Subscription ID
-
-**Response:**
-```json
-{
-  "data": {
-    "subscriptionId": "uuid-subscription-id",
-    "eventName": "create",
-    "hookUrl": "https://your-app.com/webhook",
-    "module": "customer",
-    "createdAt": "2025-01-07T10:00:00Z",
-    "modifiedAt": "2025-01-07T10:00:00Z"
-  }
-}
-```
-
-**Example:**
-```bash
-curl -H "x-api-key: YOUR_API_KEY" \
-  "https://srv.inflowcrm.pl/webhooks/uuid-subscription-id"
-```
-
----
-
-## DELETE /webhooks/{id}
-
-Removes a webhook subscription.
-
-**Headers:**
-```
-x-api-key: YOUR_API_KEY
-```
-
-**Path Parameters:**
-- `id` (string, required): Subscription ID
-
-**Response:**
-```json
-{
-  "data": {
-    "deleted": true
-  }
-}
-```
-
-**Example:**
-```bash
-curl -X DELETE \
-  -H "x-api-key: YOUR_API_KEY" \
-  "https://srv.inflowcrm.pl/webhooks/uuid-subscription-id"
-```
-
----
-
-## Advanced Filtering – Error Scenarios
-
-- **Invalid Condition:**
-  ```json
-  {
-    "error": {
-      "code": "VALIDATION_ERROR",
-      "message": "Unsupported filter condition: 'contains'",
-      "details": {}
-    }
-  }
-  ```
-- **Type Mismatch:**
-  ```json
-  {
-    "error": {
-      "code": "VALIDATION_ERROR",
-      "message": "Condition 'greater' requires a number or date value.",
-      "details": {}
-    }
-  }
-  ```
-- **Unsupported Field:**
-  ```json
-  {
-    "error": {
-      "code": "VALIDATION_ERROR",
-      "message": "Field 'profilePicture' does not support advanced filtering.",
-      "details": {}
-    }
-  }
-  ```
 
 ---

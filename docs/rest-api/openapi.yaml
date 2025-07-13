@@ -258,7 +258,20 @@ paths:
               $ref: '#/components/schemas/CreateOrUpdateRecordRequest'
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateOrUpdateRecordRequest'
+              type: object
+              required: [module, data]
+              properties:
+                module:
+                  type: string
+                  description: "Module name to create record in."
+                  example: "customer"
+                data:
+                  type: object
+                  description: "Key-value pairs of record data."
+                  additionalProperties: true
+                  example:
+                    name: "John Doe"
+                    email: "john@example.com"
       responses:
         '201':
           description: Record created
@@ -290,7 +303,19 @@ paths:
               $ref: '#/components/schemas/CreateOrUpdateRecordRequest'
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateOrUpdateRecordRequest'
+              type: object
+              required: [module, data]
+              properties:
+                module:
+                  type: string
+                  description: "Module name of the record to update."
+                  example: "customer"
+                data:
+                  type: object
+                  description: "Key-value pairs of record data to update."
+                  additionalProperties: true
+                  example:
+                    name: "Jane Doe"
       responses:
         '200':
           description: Record updated
@@ -464,8 +489,8 @@ components:
       properties:
         event:
           type: string
-          description: Event type (created, updated, deleted)
-          example: created
+          description: 'Event type (`create`, `update`, or `delete`)'
+          example: create
           pattern: '^[\w\-]{1,64}$'
         hookUrl:
           type: string
@@ -477,6 +502,11 @@ components:
           description: Module name or canonical module identifier
           example: customer
           pattern: '^[\w\-]{1,64}$'
+        hmacSecret:
+          type: string
+          description: 'Optional client-provided HMAC secret (32-128 chars). If omitted, a secret is generated automatically.'
+          minLength: 32
+          maxLength: 128
     WebhookSubscription:
       type: object
       properties:
@@ -485,7 +515,7 @@ components:
           example: uuid-subscription-id
         eventName:
           type: string
-          example: created
+          example: create
         hookUrl:
           type: string
           example: https://your-app.com/webhook
@@ -549,8 +579,10 @@ components:
     ModuleField:
       type: object
       properties:
-        fieldId: { type: string }
         apiFieldName: { type: string }
+        description: { type: string }
+        decimal: { type: integer }
+        length: { type: integer }
         type: { type: string }
         label: { type: string }
         required: { type: boolean }
@@ -560,14 +592,7 @@ components:
           items: { type: string }
         relatedModule: { type: string }
         relationFieldName: { type: string }
-        decimals: { type: integer }
-        maxLength: { type: integer }
-        minLength: { type: integer }
         defaultValue: {}
-        helpText: { type: string }
-        placeholder: { type: string }
-        isUnique: { type: boolean }
-        isIndexed: { type: boolean }
     CreateOrUpdateRecordRequest:
       type: object
       required: [module]
@@ -583,57 +608,39 @@ components:
     # --- Advanced Filtering Support ---
     AdvancedFilter:
       type: object
-      description: |
-        Advanced filter condition for a single field.
-        Supported conditions:
-          - equal
-          - notEqual
-          - greater
-          - greaterOrEqual
-          - lower
-          - lowerOrEqual
-          - in
-          - notIn
-        See AdvancedFilters for structure and examples.
-      required: [condition, value]
+      required: [field, condition, value]
       properties:
+        field:
+          type: string
+          description: "Field name to apply the filter on."
+          example: "customerNip"
         condition:
           type: string
           enum: [equal, notEqual, greater, greaterOrEqual, lower, lowerOrEqual, in, notIn]
-          description: Filtering condition (operator).
+          description: "Filtering condition (operator)."
+          example: "equal"
         value:
-          description: Value to compare against. For `in`/`notIn`, provide an array.
-        fieldType:
-          type: string
-          description: Field type (string, number, date, boolean, etc.)
-      example:
-        condition: greaterOrEqual
-        value: 100
-        fieldType: number
+          description: "Value to compare against. For `in`/`notIn`, provide an array."
+          example: "8943092379"
 
     AdvancedFilters:
-      type: object
-      description: |
-        Object where each key is a field name and value is an AdvancedFilter or array of AdvancedFilters.
-        Allows combining multiple conditions per field.
-      additionalProperties:
-        oneOf:
-          - $ref: '#/components/schemas/AdvancedFilter'
-          - type: array
+      type: array
+      description: "An array of filter groups. Within a group, conditions are combined with AND."
+      items:
+        type: object
+        properties:
+          conditions:
+            type: array
             items:
               $ref: '#/components/schemas/AdvancedFilter'
       example:
-        amount:
-          - condition: greaterOrEqual
-            value: 100
-          - condition: lower
-            value: 500
-        status:
-          condition: in
-          value: [ "active", "pending" ]
-        createdAt:
-          condition: greater
-          value: "2024-01-01"
+        - conditions:
+            - field: "customerNip"
+              condition: "equal"
+              value: "8943092379"
+            - field: "customerCity"
+              condition: "equal"
+              value: "Wrocław"
 
     # --- Updated Request Schemas ---
     SearchRecordsRequest:
@@ -659,40 +666,13 @@ components:
           default: 50
         sort:
           type: object
-          additionalProperties:
-            type: integer
-            enum: [-1, 1]
+          description: "Sort order. Only one field can be used for sorting. Use 1 for ascending and -1 for descending."
+          example:
+            createdAt: -1
       description: |
         Search records with support for both simple and advanced filtering.
         - Use `filters` for legacy/simple queries: `{ "status": "active" }`
         - Use `advancedFilters` for complex conditions (see AdvancedFilters schema).
-      example:
-        simple:
-          summary: Simple filter
-          value:
-            module: customer
-            filters:
-              status: active
-            page: 1
-            limit: 50
-        advanced:
-          summary: Advanced filter
-          value:
-            module: customer
-            advancedFilters:
-              amount:
-                - condition: greaterOrEqual
-                  value: 100
-                - condition: lower
-                  value: 500
-              status:
-                condition: in
-                value: [ "active", "pending" ]
-              createdAt:
-                condition: greater
-                value: "2024-01-01"
-            page: 1
-            limit: 50
 
     FindRecordRequest:
       type: object
@@ -710,21 +690,6 @@ components:
         Find a single record by filters.
         - Use `filters` for legacy/simple queries.
         - Use `advancedFilters` for advanced conditions.
-      example:
-        simple:
-          summary: Simple filter
-          value:
-            module: customer
-            filters:
-              email: john@example.com
-        advanced:
-          summary: Advanced filter
-          value:
-            module: customer
-            advancedFilters:
-              email:
-                condition: equal
-                value: john@example.com
 
     CountRecordsRequest:
       type: object
@@ -742,24 +707,6 @@ components:
         Count records matching filters.
         - Use `filters` for legacy/simple queries.
         - Use `advancedFilters` for advanced conditions.
-      example:
-        simple:
-          summary: Simple filter
-          value:
-            module: customer
-            filters:
-              status: active
-        advanced:
-          summary: Advanced filter
-          value:
-            module: customer
-            advancedFilters:
-              status:
-                condition: notEqual
-                value: "archived"
-              amount:
-                condition: greater
-                value: 100
     RecordResponse:
       type: object
       properties:
