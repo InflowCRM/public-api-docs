@@ -428,7 +428,7 @@ Counts records matching filters.
 
 ## DELETE /api/{module}/{id}
 
-Deletes (soft delete) a record.
+Deletes a record.
 
 **Headers:**  
 `x-api-key: YOUR_API_KEY`

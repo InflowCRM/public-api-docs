@@ -18,6 +18,9 @@ info:
     > email=john@example.com
     > document=@file.pdf
     > ```
+  license:
+    name: "MIT"
+    url: "https://opensource.org/licenses/MIT"
 servers:
   - url: https://srv.inflowcrm.pl
 security:
@@ -31,11 +34,14 @@ tags:
     description: User management endpoints
   - name: Utility
     description: Miscellaneous and validation endpoints
+  - name: Webhooks
+    description: Webhook management endpoints
 paths:
   /webhooks/subscribe:
     post:
       tags: [Webhooks]
       summary: Create webhook subscription
+      operationId: createWebhookSubscription
       security: [{ ApiKeyAuth: [] }]
       requestBody:
         required: true
@@ -61,18 +67,13 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenError'
         '429':
           $ref: '#/components/responses/RateLimit'
   /webhooks:
     get:
       tags: [Webhooks]
       summary: List webhook subscriptions
+      operationId: listWebhookSubscriptions
       security: [{ ApiKeyAuth: [] }]
       parameters:
         - name: page
@@ -112,6 +113,7 @@ paths:
     get:
       tags: [Webhooks]
       summary: Get webhook subscription details
+      operationId: getWebhookSubscription
       security: [{ ApiKeyAuth: [] }]
       parameters:
         - name: id
@@ -133,12 +135,6 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenError'
         '404':
           $ref: '#/components/responses/NotFound'
         '429':
@@ -146,6 +142,7 @@ paths:
     delete:
       tags: [Webhooks]
       summary: Delete webhook subscription
+      operationId: deleteWebhookSubscription
       security: [{ ApiKeyAuth: [] }]
       parameters:
         - name: id
@@ -171,12 +168,6 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenError'
         '404':
           $ref: '#/components/responses/NotFound'
         '429':
@@ -185,6 +176,7 @@ paths:
     get:
       tags: [Modules]
       summary: Get available module names for the current user bundle
+      operationId: getBundleModuleNames
       security: [{ ApiKeyAuth: [] }]
       responses:
         '200':
@@ -205,10 +197,13 @@ paths:
                         systemModuleName: { type: string }
                   meta:
                     $ref: '#/components/schemas/Meta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/getUserList:
     get:
       tags: [Users]
       summary: Get all active users for the current tenant
+      operationId: getUserList
       security: [{ ApiKeyAuth: [] }]
       responses:
         '200':
@@ -224,10 +219,13 @@ paths:
                       $ref: '#/components/schemas/User'
                   meta:
                     $ref: '#/components/schemas/Meta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/validateApiKey:
     post:
       tags: [Utility]
       summary: Validate API key and return user info
+      operationId: validateApiKey
       responses:
         '200':
           description: API key is valid
@@ -251,6 +249,7 @@ paths:
     post:
       tags: [Records]
       summary: Create a new record (supports file upload)
+      operationId: createRecord
       security: [{ ApiKeyAuth: [] }]
       requestBody:
         content:
@@ -277,6 +276,7 @@ paths:
     patch:
       tags: [Records]
       summary: Update a record (supports file upload)
+      operationId: updateRecord
       security: [{ ApiKeyAuth: [] }]
       parameters:
         - name: id
@@ -308,6 +308,7 @@ paths:
     post:
       tags: [Records]
       summary: Search records with filters and pagination
+      operationId: searchRecords
       security: [{ ApiKeyAuth: [] }]
       requestBody:
         content:
@@ -331,6 +332,7 @@ paths:
     post:
       tags: [Records]
       summary: Find a single record by filters
+      operationId: findRecord
       security: [{ ApiKeyAuth: [] }]
       requestBody:
         content:
@@ -354,6 +356,7 @@ paths:
     post:
       tags: [Modules]
       summary: Get metadata for all fields in a module
+      operationId: getModuleFields
       security: [{ ApiKeyAuth: [] }]
       requestBody:
         content:
@@ -383,6 +386,7 @@ paths:
     post:
       tags: [Modules]
       summary: Get sample data for a module
+      operationId: getSampleData
       security: [{ ApiKeyAuth: [] }]
       requestBody:
         content:
@@ -405,6 +409,7 @@ paths:
     post:
       tags: [Records]
       summary: Count records matching filters
+      operationId: countRecords
       security: [{ ApiKeyAuth: [] }]
       requestBody:
         content:
@@ -431,6 +436,7 @@ paths:
     delete:
       tags: [Records]
       summary: Delete a record (soft delete)
+      operationId: deleteRecord
       security: [{ ApiKeyAuth: [] }]
       parameters:
         - name: module
@@ -518,27 +524,6 @@ components:
             hasPrev:
               type: boolean
               example: false
-    ForbiddenError:
-      type: object
-      properties:
-        statusCode:
-          type: integer
-          example: 403
-        error:
-          type: string
-          example: Forbidden
-        message:
-          type: string
-          example: Insufficient permissions to manage webhooks
-        errorId:
-          type: string
-          example: FORBIDDEN
-  securitySchemes:
-    ApiKeyAuth:
-      type: apiKey
-      in: header
-      name: x-api-key
-  schemas:
     Meta:
       type: object
       properties:
@@ -681,7 +666,7 @@ components:
         Search records with support for both simple and advanced filtering.
         - Use `filters` for legacy/simple queries: `{ "status": "active" }`
         - Use `advancedFilters` for complex conditions (see AdvancedFilters schema).
-      examples:
+      example:
         simple:
           summary: Simple filter
           value:
@@ -725,7 +710,7 @@ components:
         Find a single record by filters.
         - Use `filters` for legacy/simple queries.
         - Use `advancedFilters` for advanced conditions.
-      examples:
+      example:
         simple:
           summary: Simple filter
           value:
@@ -757,7 +742,7 @@ components:
         Count records matching filters.
         - Use `filters` for legacy/simple queries.
         - Use `advancedFilters` for advanced conditions.
-      examples:
+      example:
         simple:
           summary: Simple filter
           value:
@@ -791,6 +776,11 @@ components:
             type: object
         meta:
           $ref: '#/components/schemas/Meta'
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
   responses:
     Unauthorized:
       description: Unauthorized - missing or invalid API key

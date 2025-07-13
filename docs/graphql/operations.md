@@ -390,7 +390,7 @@ mutation {
 
 ### Module.delete
 
-Deletes (soft delete) a record.
+Deletes a record.
 
 **Arguments:**
 - `id` - Record ID (required)

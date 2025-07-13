@@ -116,7 +116,7 @@ InflowCRM supports three types of webhook events:
 |-------|-------------|----------------|
 | `create` | Record creation | A new record is added to the module |
 | `update` | Record modification | An existing record is modified |
-| `delete` | Record deletion | A record is soft-deleted |
+| `delete` | Record deletion | A record is deleted |
 
 ---
 
@@ -179,30 +179,34 @@ Content-Type: application/json
 **Validation Error (400):**
 ```json
 {
-  "statusCode": 400,
-  "error": "Bad Request",
-  "message": "Validation failed",
-  "details": [
-    {
-      "field": "event",
-      "errors": ["event must be one of the allowed event types"]
-    },
-    {
-      "field": "hookUrl",
-      "errors": ["hookUrl must be a valid URL"]
-    }
-  ],
-  "errorId": "VALIDATION_ERROR"
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Validation failed",
+    "details": [
+      {
+        "field": "event",
+        "errors": [
+          "event must be one of the allowed event types"
+        ]
+      },
+      {
+        "field": "hookUrl",
+        "errors": [
+          "hookUrl must be a valid URL"
+        ]
+      }
+    ]
+  }
 }
 ```
 
-**SSRF Protection Error (400):**
+**Invalid URL / SSRF Protection Error (400):**
 ```json
 {
-  "statusCode": 400,
-  "error": "Bad Request",
-  "message": "Invalid hookUrl - must be a valid HTTP/HTTPS URL and not internal/private",
-  "errorId": "INVALID_URL"
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid hookUrl - must be a valid HTTP/HTTPS URL and not internal/private"
+  }
 }
 ```
 
@@ -210,11 +214,11 @@ Content-Type: application/json
 **Rate Limit Error (429):**
 ```json
 {
-  "statusCode": 429,
-  "error": "Too Many Requests",
-  "message": "Rate limit exceeded for this operation. Please try again later.",
-  "details": null,
-  "errorId": "WEBHOOK_RATE_LIMIT_EXCEEDED"
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "Rate limit exceeded for this operation. Please try again later.",
+    "details": null
+  }
 }
 ```
 
@@ -331,20 +335,20 @@ x-api-key: YOUR_API_KEY
 **Not Found (404):**
 ```json
 {
-  "statusCode": 404,
-  "error": "Not Found",
-  "message": "Webhook subscription not found",
-  "errorId": "NOT_FOUND"
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Webhook subscription not found"
+  }
 }
 ```
 
 **Missing ID Parameter (400):**
 ```json
 {
-  "statusCode": 400,
-  "error": "Bad Request",
-  "message": "id param is required",
-  "errorId": "VALIDATION_ERROR"
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "id param is required"
+  }
 }
 ```
 
@@ -386,20 +390,20 @@ x-api-key: YOUR_API_KEY
 **Not Found (404):**
 ```json
 {
-  "statusCode": 404,
-  "error": "Not Found",
-  "message": "Webhook subscription not found",
-  "errorId": "NOT_FOUND"
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Webhook subscription not found"
+  }
 }
 ```
 
 **Missing ID Parameter (400):**
 ```json
 {
-  "statusCode": 400,
-  "error": "Bad Request",
-  "message": "id param is required",
-  "errorId": "VALIDATION_ERROR"
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "id param is required"
+  }
 }
 ```
 
@@ -489,7 +493,7 @@ All webhook payloads follow this structure:
 
 ### Delete Event Payload
 
-**Event:** When a record is deleted (soft delete)
+**Event:** When a record is deleted
 
 ```json
 {
@@ -700,11 +704,11 @@ RateLimit-Reset: 1641024000
 **Rate Limit Exceeded Response:**
 ```json
 {
-  "statusCode": 429,
-  "error": "Too Many Requests",
-  "message": "Rate limit exceeded for this operation. Please try again later.",
-  "details": null,
-  "errorId": "WEBHOOK_RATE_LIMIT_EXCEEDED"
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "Rate limit exceeded for this operation. Please try again later.",
+    "details": null
+  }
 }
 ```
 
