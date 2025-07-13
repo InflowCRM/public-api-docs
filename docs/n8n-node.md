@@ -11,6 +11,16 @@ The [n8n-nodes-inflow-crm](https://www.npmjs.com/package/n8n-nodes-inflow-crm) p
 - Advanced filtering, sorting, and pagination
 - Multi-module support (contacts, companies, deals, etc.)
 
+## Installation
+
+For detailed instructions, see the [official n8n documentation](https://docs.n8n.io/integrations/community-nodes/installation/).
+
+**n8n Admin Panel (Recommended)**
+1. Open n8n, go to **Settings → Community Nodes**
+2. Click **Install a community node**
+3. Enter: `n8n-nodes-inflow-crm`
+4. Click **Install**
+
 ---
 
 ## Node Actions
@@ -79,28 +89,6 @@ The Inflow CRM Trigger node responds to real-time CRM events:
 - Improved support for complex field relationships and multiselect fields is planned
 
 
-## Installation
-
-**Option 1: n8n Admin Panel (Recommended)**
-1. Open n8n, go to **Settings → Community Nodes**
-2. Click **Install a community node**
-3. Enter: `n8n-nodes-inflow-crm`
-4. Click **Install**
-
-**Option 2: Manual (npm)**
-```bash
-npm install n8n-nodes-inflow-crm
-```
-
-**Option 3: Docker**
-Add to your environment variables:
-```bash
-N8N_NODES_INCLUDE=n8n-nodes-inflow-crm
-```
-Or install in a running container:
-```bash
-docker exec -it n8n npm install n8n-nodes-inflow-crm
-```
 
 ## More Information
 
