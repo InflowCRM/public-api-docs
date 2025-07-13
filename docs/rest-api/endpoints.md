@@ -83,12 +83,6 @@ Validates an API key and returns user info.
 **Headers:**  
 `x-api-key: YOUR_API_KEY`
 
-**Body:**
-```json
-{
-  "apiKey": "YOUR_API_KEY"
-}
-```
 
 **Response:**
 ```json

@@ -228,14 +228,6 @@ paths:
     post:
       tags: [Utility]
       summary: Validate API key and return user info
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                apiKey:
-                  type: string
       responses:
         '200':
           description: API key is valid
