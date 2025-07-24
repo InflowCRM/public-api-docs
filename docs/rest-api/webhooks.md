@@ -173,6 +173,15 @@ Content-Type: application/json
   }
 }
 ```
+**Duplicate Webhook Subscription:**
+- When Inflow recievies a duplicate webhook subscription it will respond with the existing one
+```json
+{
+  "data": {
+    "id": "uuid-subscription-id"
+  }
+}
+```
 
 **Enhanced Error Responses:**
 
@@ -425,6 +434,7 @@ All webhook payloads follow this structure:
 
 ```json
 {
+  "id": "your-records-id",
   "event": "create|update|delete",
   "module": "customer",
   "data": {
@@ -638,17 +648,6 @@ InflowCRM validates webhook URLs to prevent security issues:
   }
 }
 ```
-
-**Duplicate Subscription (400):**
-```json
-{
-  "error": {
-    "code": "HOOK_ALREADY_EXISTS",
-    "message": "Webhook subscription already exists for this hookUrl, module and event"
-  }
-}
-```
-
 **Module Not Found (400):**
 ```json
 {
