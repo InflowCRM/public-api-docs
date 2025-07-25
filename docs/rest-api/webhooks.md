@@ -114,9 +114,9 @@ InflowCRM supports three types of webhook events:
 
 | Event | Description | Triggered When |
 |-------|-------------|----------------|
-| `create` | Record creation | A new record is added to the module |
-| `update` | Record modification | An existing record is modified |
-| `delete` | Record deletion | A record is deleted |
+| `created` | Record creation | A new record is added to the module |
+| `update`  | Record modification | An existing record is modified |
+| `deleted` | Record deletion | A record is deleted |
 
 ---
 
@@ -144,7 +144,7 @@ Content-Type: application/json
 **Request Body:**
 ```json
 {
-  "event": "create",
+  "event": "created",
   "hookUrl": "https://your-app.com/webhook",
   "module": "customer",
   "hmacSecret": "optional_client_secret_string"
@@ -152,7 +152,7 @@ Content-Type: application/json
 ```
 
 **Parameters (Enhanced Validation):**
-- `event` (string, required): Event type (`create`, `update`, or `delete`)
+- `event` (string, required): Event type (`created`, `update`, or `deleted`)
   - Must match pattern: `^[\w\-]{1,64}$` (alphanumeric, dashes, underscores only)
 - `hookUrl` (string, required): Your webhook endpoint URL (HTTPS strongly recommended)
   - Must be valid HTTP/HTTPS URL, maximum 512 characters
@@ -237,7 +237,7 @@ curl -X POST "https://srv.inflowcrm.pl/webhooks/subscribe" \
   -H "x-api-key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "event": "create",
+    "event": "created",
     "hookUrl": "https://your-app.com/webhook/customer-created",
     "module": "customer"
   }'
@@ -268,7 +268,7 @@ x-api-key: YOUR_API_KEY
   "data": [
     {
       "subscriptionId": "uuid-subscription-id",
-      "eventName": "create",
+      "eventName": "created",
       "hookUrl": "https://your-app.com/webhook",
       "module": "customer",
       "createdAt": "2025-01-07T10:00:00Z",
@@ -330,7 +330,7 @@ x-api-key: YOUR_API_KEY
 {
   "data": {
     "subscriptionId": "uuid-subscription-id",
-    "eventName": "create",
+    "eventName": "created",
     "hookUrl": "https://your-app.com/webhook",
     "module": "customer",
     "createdAt": "2025-01-07T10:00:00Z",
@@ -457,7 +457,7 @@ All webhook payloads follow this structure:
 
 ```json
 {
-  "event": "create",
+  "event": "created",
   "module": "customer",
   "data": {
     "name": "John Doe",
@@ -476,7 +476,7 @@ All webhook payloads follow this structure:
 
 ```json
 {
-  "event": "update",
+  "event": "updated",
   "module": "customer",
   "data": {
     "name": "John Smith",
@@ -507,7 +507,7 @@ All webhook payloads follow this structure:
 
 ```json
 {
-  "event": "delete",
+  "event": "deleted",
   "module": "customer",
   "data": {
     "deleted": true,
@@ -822,7 +822,7 @@ curl -X POST "https://srv.inflowcrm.pl/webhooks/subscribe" \
   -H "x-api-key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "event": "create",
+    "event": "created",
     "hookUrl": "https://webhook.site/your-unique-url",
     "module": "customer"
   }'
@@ -831,7 +831,7 @@ curl -X POST "https://srv.inflowcrm.pl/webhooks/subscribe" \
 **Verify signature generation:**
 ```javascript
 const crypto = require('crypto');
-const payload = '{"event":"create","module":"customer","data":{"name":"Test"}}';
+const payload = '{"event":"created","module":"customer","data":{"name":"Test"}}';
 const secret = 'your-webhook-secret';
 const signature = crypto.createHmac('sha256', secret).update(payload).digest('hex');
 console.log('Expected signature:', signature);
