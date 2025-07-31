@@ -9,6 +9,7 @@ This section provides detailed documentation for every public API endpoint, incl
 ### Core API Endpoints
 - [GET /api/getBundleModuleNames](#get-apigetbundlemodulenames)
 - [GET /api/getUserList](#get-apigetuserlist)
+- [POST /api/getProcessesForModule](#post-apigetprocessesformodule)
 - [POST /api/validateApiKey](#post-apivalidateapikey)
 - [POST /api/createRecord](#post-apicreaterecord)
 - [PATCH /api/updateRecordid](#patch-apiupdaterecordid)
@@ -65,6 +66,57 @@ Returns all active users for the current tenant.
     }
   ],
   "meta": { "deprecation": null }
+}
+```
+
+---
+
+## POST /api/getProcessesForModule
+
+Returns all available processes for a specific module.
+
+**Headers:**  
+`x-api-key: YOUR_API_KEY`
+
+**Body:**
+```json
+{
+  "module": "order"
+}
+```
+
+> **Note:** This endpoint currently supports the `order` and `potential` modules only.
+
+**Response:**
+```json
+{
+	"data": [
+		{
+			"id": "648be3f299a153207a257751",
+			"systemLabel": "B2B Sales Process",
+			"stagesNames": [
+				"New Lead",
+				"First Contact",
+				"Needs Analysis",
+				"Offer Sent",
+				"Negotiations",
+        "Closed"
+			]
+		},
+		{
+			"id": "64b55a77477c55373394a477",
+			"systemLabel": "Customer Support Process",
+			"stagesNames": [
+				"New Ticket",
+				"In Progress",
+				"Waiting for Customer",
+				"Resolved"
+			]
+		}
+	],
+	"meta": {
+		"deprecation": null
+	}
 }
 ```
 
@@ -127,7 +179,7 @@ curl -X POST "https://srv.inflowcrm.pl/api/createRecord" \
   -F "module=customer" \
   -F "name=John Doe" \
   -F "email=john@example.com" \
-  -F "profilePicture=@/path/to/photo.jpg"
+  -F "profilePicture=@path/to/photo.jpg"
 ```
 
 **Response:**
@@ -174,7 +226,7 @@ curl -X PATCH "https://srv.inflowcrm.pl/api/updateRecord/RECORD_ID" \
   -H "x-api-key: YOUR_API_KEY" \
   -F "module=customer" \
   -F "name=Jane Doe" \
-  -F "profilePicture=@/path/to/photo.jpg"
+  -F "profilePicture=@path/to/photo.jpg"
 ```
 
 **Response:**
@@ -252,6 +304,8 @@ The `advancedFilters` property enables complex queries using supported condition
 | `lowerOrEqual`   | Less than or equal                          | `500`                  | number, date              |
 | `in`             | In array                                    | `[ "active", "pending" ]` | string, number         |
 | `notIn`          | Not in array                                | `[ "archived" ]`       | string, number            |
+| `isEmpty`        | Is null, empty string, or empty array       | `true`                 | all                       |
+| `isNotEmpty`     | Is not null, empty string, or empty array   | `true`                 | all                       |
 
 **Example:**
 ```json
@@ -266,6 +320,47 @@ The `advancedFilters` property enables complex queries using supported condition
     {
       "conditions": [
         { "field": "status", "condition": "in", "value": ["active", "pending"] }
+      ]
+    }
+  ]
+}
+```
+
+**Example (isEmpty / isNotEmpty):**
+To find all customers that have an assigned contact:
+```json
+{
+  "module": "customer",
+  "advancedFilters": [
+    {
+      "conditions": [
+        { "field": "customerContact", "condition": "isNotEmpty", "value": true }
+      ]
+    }
+  ]
+}
+```
+To find all customers that do **not** have an assigned contact, you can use `isEmpty` or negate `isNotEmpty`:
+```json
+{
+  "module": "customer",
+  "advancedFilters": [
+    {
+      "conditions": [
+        { "field": "customerContact", "condition": "isEmpty", "value": true }
+      ]
+    }
+  ]
+}
+```
+or
+```json
+{
+  "module": "customer",
+  "advancedFilters": [
+    {
+      "conditions": [
+        { "field": "customerContact", "condition": "isNotEmpty", "value": false }
       ]
     }
   ]
@@ -297,10 +392,12 @@ This allows for building complex queries, such as `(condition1 AND condition2) O
 
 | Field Type | Supported Conditions                  |
 |------------|--------------------------------------|
-| string     | equal, notEqual, in, notIn           |
-| number     | equal, notEqual, greater, greaterOrEqual, lower, lowerOrEqual, in, notIn |
-| date       | equal, notEqual, greater, greaterOrEqual, lower, lowerOrEqual |
-| boolean    | equal, notEqual                      |
+| string     | equal, notEqual, in, notIn, isEmpty, isNotEmpty |
+| number     | equal, notEqual, greater, greaterOrEqual, lower, lowerOrEqual, in, notIn, isEmpty, isNotEmpty |
+| date       | equal, notEqual, greater, greaterOrEqual, lower, lowerOrEqual, isEmpty, isNotEmpty |
+| boolean    | equal, notEqual, isEmpty, isNotEmpty |
+| relation   | equal, notEqual, in, notIn, isEmpty, isNotEmpty |
+| array      | isEmpty, isNotEmpty                  |
 
 ---
 
