@@ -26,7 +26,8 @@ All errors use a consistent format:
 |------|--------------------------|--------------------------------------|
 | 400  | Bad Request              | Validation failed, invalid input     |
 | 401  | Unauthorized             | Missing or invalid API key           |
-| 404  | Not Found                | Resource does not exist              |
+| 403  | Forbidden                | Access to module or resource denied  |
+| 404  | Not Found                | Resource does not exist or deleted   |
 | 409  | Conflict                 | Duplicate or conflicting data        |
 | 415  | Unsupported Media Type   | Wrong content type                   |
 | 422  | Unprocessable Entity     | Semantic validation error            |

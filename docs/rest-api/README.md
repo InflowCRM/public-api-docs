@@ -53,6 +53,7 @@ https://srv.inflowcrm.pl
 ## 🧭 API Overview
 
 - Simple and advanced filtering for all search/count/find endpoints
+- **Record retrieval** by single ID or multiple IDs with pagination
 - Comprehensive support for filter conditions: `equal`, `notEqual`, `greater`, `greaterOrEqual`, `lower`, `lowerOrEqual`, `in`, `notIn`
 - Migration path from simple to advanced filters (backward compatible)
 - Error handling and field compatibility matrix
