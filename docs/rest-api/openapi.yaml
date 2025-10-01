@@ -377,6 +377,130 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '429':
           $ref: '#/components/responses/RateLimit'
+  /api/{module}/{id}:
+    get:
+      tags: [Records]
+      summary: Get single record by ID
+      operationId: getRecordById
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - name: module
+          in: path
+          required: true
+          description: Module name or translation
+          schema:
+            type: string
+            example: customer
+        - name: id
+          in: path
+          required: true
+          description: Record ID (MongoDB ObjectId)
+          schema:
+            type: string
+            example: 507f1f77bcf86cd799439011
+      responses:
+        '200':
+          description: Single record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+    delete:
+      tags: [Records]
+      summary: Delete a record
+      operationId: deleteRecord
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - name: module
+          in: path
+          required: true
+          description: Module name
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Record ID
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No Content
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+  /api/records/getByIds:
+    post:
+      tags: [Records]
+      summary: Get multiple records by IDs with pagination
+      operationId: getRecordsByIds
+      security: [{ ApiKeyAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - module
+                - ids
+              properties:
+                module:
+                  type: string
+                  description: Module name or translation
+                  example: customer
+                ids:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of record IDs
+                  example: ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439012"]
+                page:
+                  type: integer
+                  minimum: 1
+                  default: 1
+                  description: Page number
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 200
+                  default: 50
+                  description: Records per page
+                sort:
+                  type: object
+                  description: Sort criteria (1 = ascending, -1 = descending)
+                  example: { "createdAt": -1 }
+      responses:
+        '200':
+          description: List of records with pagination
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimit'
   /api/getModuleFields:
     post:
       tags: [Modules]
@@ -457,30 +581,6 @@ paths:
                     $ref: '#/components/schemas/Meta'
         '401':
           $ref: '#/components/responses/Unauthorized'
-  /api/{module}/{id}:
-    delete:
-      tags: [Records]
-      summary: Delete a record (soft delete)
-      operationId: deleteRecord
-      security: [{ ApiKeyAuth: [] }]
-      parameters:
-        - name: module
-          in: path
-          required: true
-          schema: { type: string }
-        - name: id
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        '204':
-          description: Record deleted
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimit'
 components:
   schemas:
     SubscribeWebhookRequest:
@@ -779,5 +879,18 @@ components:
                 type: object
                 properties:
                   code: { type: string, example: NOT_FOUND }
+                  message: { type: string }
+                  details: {}
+    Forbidden:
+      description: Forbidden - access to module or resource denied
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code: { type: string, example: FORBIDDEN }
                   message: { type: string }
                   details: {}

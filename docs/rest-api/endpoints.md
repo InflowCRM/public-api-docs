@@ -15,6 +15,8 @@ This section provides detailed documentation for every public API endpoint, incl
 - [PATCH /api/updateRecordid](#patch-apiupdaterecordid)
 - [POST /api/searchRecords](#post-apisearchrecords)
 - [POST /api/findRecord](#post-apifindrecord)
+- [GET /api/{module}/{id}](#get-apimoduleid)
+- [POST /api/records/getByIds](#post-apirecordsgetbyids)
 - [POST /api/getModuleFields](#post-apigetmodulefields)
 - [POST /api/getSampleData](#post-apigetsampledata)
 - [POST /api/records/count](#post-apirecordscount)
@@ -438,6 +440,136 @@ Finds a single record by filters.
   "meta": { "deprecation": null }
 }
 ```
+
+---
+
+## GET /api/{module}/{id}
+
+Retrieves a single record from a specified module by its ID.
+
+**Headers:**
+`x-api-key: YOUR_API_KEY`
+
+**Path Parameters:**
+- `module` (string, required): Module name (e.g., "customer", "contact", "order") or its translation
+- `id` (string, required): Unique record identifier (MongoDB ObjectId)
+
+**Response (200 OK):**
+```json
+{
+  "data": {
+    "id": "507f1f77bcf86cd799439011",
+    "name": "Jan Kowalski",
+    "email": "jan@example.com"
+  },
+  "meta": {
+    "deprecation": null
+  }
+}
+```
+
+**Error Responses:**
+- **404 Not Found**: Record not found or has been deleted
+- **401 Unauthorized**: Missing or invalid API key
+- **403 Forbidden**: Module not available in your bundle
+
+**Example (curl):**
+```bash
+curl -X GET "https://srv.inflowcrm.pl/api/customer/507f1f77bcf86cd799439011" \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+**Notes:**
+- Automatically filters out deleted records (`deleted: true`)
+- Returns only records belonging to the same tenant (master)
+- Fields are mapped from internal format to API format
+
+---
+
+## POST /api/records/getByIds
+
+Retrieves multiple records from a specified module by a list of IDs. Supports pagination for large datasets.
+
+**Headers:**
+`x-api-key: YOUR_API_KEY`
+`Content-Type: application/json`
+
+**Body:**
+```json
+{
+  "module": "customer",
+  "ids": [
+    "507f1f77bcf86cd799439011",
+    "507f1f77bcf86cd799439012",
+    "507f1f77bcf86cd799439013"
+  ],
+  "page": 1,
+  "limit": 50,
+  "sort": {
+    "createdAt": -1
+  }
+}
+```
+
+**Body Parameters:**
+- `module` (string, required): Module name or its translation
+- `ids` (array of strings, required): Array of record IDs to retrieve
+- `page` (number, optional, default: 1): Page number (min: 1)
+- `limit` (number, optional, default: 50): Records per page (min: 1, max: 200)
+- `sort` (object, optional): Sort criteria, where `1` = ascending, `-1` = descending
+
+**Response (200 OK):**
+```json
+{
+  "data": [
+    {
+      "id": "507f1f77bcf86cd799439011",
+      "name": "Jan Kowalski",
+      "email": "jan@example.com"
+    },
+    {
+      "id": "507f1f77bcf86cd799439012",
+      "name": "Anna Nowak",
+      "email": "anna@example.com"
+    }
+  ],
+  "meta": {
+    "pagination": {
+      "page": 1,
+      "limit": 50,
+      "total": 2,
+      "pages": 1
+    },
+    "deprecation": null
+  }
+}
+```
+
+**Error Responses:**
+- **400 Bad Request**: Invalid parameters (e.g., missing module, empty ids array)
+- **401 Unauthorized**: Missing or invalid API key
+- **403 Forbidden**: Module not available in your bundle
+
+**Example (curl):**
+```bash
+curl -X POST "https://srv.inflowcrm.pl/api/records/getByIds" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "module": "customer",
+    "ids": ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439012"],
+    "page": 1,
+    "limit": 50,
+    "sort": {"createdAt": -1}
+  }'
+```
+
+**Notes:**
+- Automatically skips non-existent or deleted records
+- Returns only records belonging to the same tenant (master)
+- Pagination allows efficient retrieval of large record sets
+- Maximum limit per page is 200 records
+- Default sort is `{ createdAt: -1 }` if not specified
 
 ---
 
