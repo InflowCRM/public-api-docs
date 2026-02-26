@@ -244,13 +244,13 @@ query {
 
 ## Further Reading
 
-- [Operations Reference](./operations.md) - Complete list of all available operations
-- [Schema Guide](./schema.md) - Understanding the GraphQL schema structure
-- [Query Examples](./queries.md) - Common query patterns and examples
-- [Mutation Examples](./mutations.md) - Creating, updating, and deleting records
-- [Filtering Guide](./filtering.md) - Advanced filtering capabilities
-- [Error Handling](./errors.md) - Understanding and handling errors
-- [Best Practices](./best-practices.md) - Performance tips and recommendations
+- [Operations Reference](docs/graphql/operations.md) - Complete list of all available operations
+- [Schema Guide](docs/graphql/schema.md) - Understanding the GraphQL schema structure
+- [Query Examples](docs/graphql/queries.md) - Common query patterns and examples
+- [Mutation Examples](docs/graphql/mutations.md) - Creating, updating, and deleting records
+- [Filtering Guide](docs/graphql/filtering.md) - Advanced filtering capabilities
+- [Error Handling](docs/graphql/errors.md) - Understanding and handling errors
+- [Best Practices](docs/graphql/best-practices.md) - Performance tips and recommendations
 
 ---
 
@@ -278,4 +278,4 @@ Choose REST when you need:
 
 ---
 
-<sub align="center">© 2025 InflowCRM &middot; GraphQL API Documentation</sub>
+<sub align="center">© 2026 InflowCRM &middot; GraphQL API Documentation</sub>

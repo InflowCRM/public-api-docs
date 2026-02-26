@@ -240,8 +240,7 @@ Delete operations return a simple result:
 
 ```graphql
 type OperationResult {
-  success: Boolean!
-  message: String!
+  result: Boolean!
 }
 ```
 
@@ -502,4 +501,4 @@ The schema cache is invalidated when:
 
 ---
 
-<sub align="center">© 2025 InflowCRM &middot; GraphQL Schema Guide</sub>
+<sub align="center">© 2026 InflowCRM &middot; GraphQL Schema Guide</sub>

@@ -612,4 +612,4 @@ GraphQL operations can return different types of errors:
 
 ---
 
-<sub align="center">© 2025 InflowCRM &middot; GraphQL Operations Reference</sub>
+<sub align="center">© 2026 InflowCRM &middot; GraphQL Operations Reference</sub>

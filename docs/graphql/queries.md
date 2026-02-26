@@ -849,4 +849,4 @@ query GetCustomerWithInvalidField {
 
 ---
 
-<sub align="center">© 2025 InflowCRM &middot; GraphQL Query Examples</sub>
+<sub align="center">© 2026 InflowCRM &middot; GraphQL Query Examples</sub>

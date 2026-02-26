@@ -38,14 +38,18 @@ All errors use a consistent format:
 
 ## 🗂️ Common Error Codes
 
-| Code                  | Description                                  |
-|-----------------------|----------------------------------------------|
-| VALIDATION_ERROR      | Request body or parameters failed validation |
-| UNAUTHORIZED          | API key missing or invalid                   |
-| NOT_FOUND             | Resource not found                           |
-| RATE_LIMIT_EXCEEDED   | Too many requests (see below)                |
-| INTERNAL_SERVER_ERROR | Unexpected server error                      |
-| FORBIDDEN             | Access to module or resource denied          |
+| Code                        | Description                                           |
+|-----------------------------|-------------------------------------------------------|
+| VALIDATION_ERROR            | Request body or parameters failed validation          |
+| UNAUTHORIZED                | API key missing or invalid                            |
+| NOT_FOUND                   | Resource not found                                    |
+| RATE_LIMIT_EXCEEDED         | Too many requests (see below)                         |
+| INTERNAL_SERVER_ERROR       | Unexpected server error                               |
+| FORBIDDEN                   | Access to module or resource denied                   |
+| SUBSCRIPTION_LIMIT_REACHED  | Webhook subscription limit reached for module/event   |
+| MODULE_NOT_FOUND            | Module not found in user's bundle                     |
+| API_KEY_IN_QUERY_NOT_ALLOWED| API key passed in query string instead of header      |
+| FILTER_CONFLICT             | Both `filters` and `advancedFilters` provided simultaneously |
 
 ---
 
@@ -80,4 +84,4 @@ All errors use a consistent format:
 
 ---
 
-_For more details, see [README.md](./README.md) and [endpoints.md](./endpoints.md)._
+_For more details, see [README.md](docs/rest-api/README.md) and [endpoints.md](docs/rest-api/endpoints.md)._

@@ -114,9 +114,9 @@ InflowCRM supports three types of webhook events:
 
 | Event | Description | Triggered When |
 |-------|-------------|----------------|
-| `created` | Record creation | A new record is added to the module |
-| `update`  | Record modification | An existing record is modified |
-| `deleted` | Record deletion | A record is deleted |
+| `create` | Record creation | A new record is added to the module |
+| `update` | Record modification | An existing record is modified |
+| `delete` | Record deletion | A record is deleted |
 
 ---
 
@@ -133,7 +133,7 @@ https://srv.inflowcrm.pl
 
 Creates a new webhook subscription for a specific module and event.
 
-**Rate Limit:** 10 requests per hour per tenant
+**Rate Limit:** 200 requests per hour per tenant
 
 **Headers:**
 ```
@@ -144,7 +144,7 @@ Content-Type: application/json
 **Request Body:**
 ```json
 {
-  "event": "created",
+  "event": "create",
   "hookUrl": "https://your-app.com/webhook",
   "module": "customer",
   "hmacSecret": "optional_client_secret_string"
@@ -152,7 +152,7 @@ Content-Type: application/json
 ```
 
 **Parameters (Enhanced Validation):**
-- `event` (string, required): Event type (`created`, `update`, or `deleted`)
+- `event` (string, required): Event type (`create`, `update`, or `delete`)
   - Must match pattern: `^[\w\-]{1,64}$` (alphanumeric, dashes, underscores only)
 - `hookUrl` (string, required): Your webhook endpoint URL (HTTPS strongly recommended)
   - Must be valid HTTP/HTTPS URL, maximum 512 characters
@@ -237,7 +237,7 @@ curl -X POST "https://srv.inflowcrm.pl/webhooks/subscribe" \
   -H "x-api-key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "event": "created",
+    "event": "create",
     "hookUrl": "https://your-app.com/webhook/customer-created",
     "module": "customer"
   }'
@@ -268,7 +268,7 @@ x-api-key: YOUR_API_KEY
   "data": [
     {
       "subscriptionId": "uuid-subscription-id",
-      "eventName": "created",
+      "eventName": "create",
       "hookUrl": "https://your-app.com/webhook",
       "module": "customer",
       "createdAt": "2025-01-07T10:00:00Z",
@@ -330,7 +330,7 @@ x-api-key: YOUR_API_KEY
 {
   "data": {
     "subscriptionId": "uuid-subscription-id",
-    "eventName": "created",
+    "eventName": "create",
     "hookUrl": "https://your-app.com/webhook",
     "module": "customer",
     "createdAt": "2025-01-07T10:00:00Z",
@@ -435,7 +435,7 @@ All webhook payloads follow this structure:
 ```json
 {
   "id": "your-records-id",
-  "event": "create|update|delete",
+  "event": "create | update | delete",
   "module": "customer",
   "data": {
     // Record data with API field names
@@ -457,7 +457,7 @@ All webhook payloads follow this structure:
 
 ```json
 {
-  "event": "created",
+  "event": "create",
   "module": "customer",
   "data": {
     "name": "John Doe",
@@ -476,7 +476,7 @@ All webhook payloads follow this structure:
 
 ```json
 {
-  "event": "updated",
+  "event": "update",
   "module": "customer",
   "data": {
     "name": "John Smith",
@@ -507,7 +507,7 @@ All webhook payloads follow this structure:
 
 ```json
 {
-  "event": "deleted",
+  "event": "delete",
   "module": "customer",
   "data": {
     "deleted": true,
@@ -644,7 +644,7 @@ InflowCRM validates webhook URLs to prevent security issues:
 {
   "error": {
     "code": "SUBSCRIPTION_LIMIT_REACHED",
-    "message": "Subscription limit (10) reached for module 'customer' event 'create'"
+    "message": "Subscription limit (25) reached for module 'customer' event 'create'"
   }
 }
 ```
@@ -688,15 +688,15 @@ InflowCRM will:
 
 Enhanced operation-specific rate limits are now enforced per tenant (API key + IP):
 
-- **Subscribe Operations**: 10 requests per hour
+- **Subscribe Operations**: 200 requests per hour
 - **List Operations**: 100 requests per hour
 - **Get/Delete Operations**: 50 requests per hour
 
 **Rate Limit Headers:**
 All webhook API responses include standard rate limit headers:
 ```
-RateLimit-Limit: 10
-RateLimit-Remaining: 9
+RateLimit-Limit: 200
+RateLimit-Remaining: 199
 RateLimit-Reset: 1641024000
 ```
 
@@ -712,7 +712,7 @@ RateLimit-Reset: 1641024000
 ```
 
 ### Subscription Limits
-- **Maximum 10 subscriptions** per module/event combination
+- **Maximum 25 subscriptions** per module/event combination
 - No limit on total number of subscriptions across different modules/events
 - **Resource Limits**: Pagination limited to maximum 100 items per page
 
@@ -822,7 +822,7 @@ curl -X POST "https://srv.inflowcrm.pl/webhooks/subscribe" \
   -H "x-api-key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "event": "created",
+    "event": "create",
     "hookUrl": "https://webhook.site/your-unique-url",
     "module": "customer"
   }'
@@ -831,7 +831,7 @@ curl -X POST "https://srv.inflowcrm.pl/webhooks/subscribe" \
 **Verify signature generation:**
 ```javascript
 const crypto = require('crypto');
-const payload = '{"event":"created","module":"customer","data":{"name":"Test"}}';
+const payload = '{"event":"create","module":"customer","data":{"name":"Test"}}';
 const secret = 'your-webhook-secret';
 const signature = crypto.createHmac('sha256', secret).update(payload).digest('hex');
 console.log('Expected signature:', signature);
@@ -850,10 +850,10 @@ For webhook-related issues:
 
 ## Further Reading
 
-- [Main API Documentation](./README.md)
-- [Endpoints Reference](./endpoints.md)
-- [Error Handling](./errors.md)
-- [Security Best Practices](./security.md)
+- [Main API Documentation](docs/rest-api/README.md)
+- [Endpoints Reference](docs/rest-api/endpoints.md)
+- [Error Handling](docs/rest-api/errors.md)
+
 
 ---
 
