@@ -23,6 +23,22 @@ For detailed instructions, see the [official n8n documentation](https://docs.n8n
 
 ---
 
+## Credential Setup
+
+Before using the node, you need to configure your InflowCRM API credentials in n8n:
+
+1. In n8n, go to **Credentials** (left sidebar)
+2. Click **Add Credential** and search for **Inflow CRM API**
+3. Enter your credentials:
+   - **API Key**: Your InflowCRM API key (from Settings > API Keys in InflowCRM)
+   - **Base URL**: `https://srv.inflowcrm.pl`
+4. Click **Save** to store the credential
+5. When adding an Inflow CRM node to a workflow, select this credential from the dropdown
+
+> **Tip:** You can create multiple credentials for different InflowCRM accounts or environments.
+
+---
+
 ## Node Actions
 
 The Inflow CRM node provides the following main operations:

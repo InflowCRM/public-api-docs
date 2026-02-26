@@ -25,7 +25,7 @@ The InflowCRM GraphQL API provides powerful filtering capabilities through the `
 - **Custom fields**: Any field with an API field name
 - **System fields**: `id`, `createdTime`, `modifiedTime`
 - **Multiple conditions**: Combine multiple filter conditions
-- **Various operators**: Support for 12 different comparison operators
+- **Various operators**: Support for 14 different comparison operators
 
 ---
 
@@ -39,13 +39,17 @@ filtration: {
     # Custom field filters
     fieldName: { operator: value }
   }
-  
-  # System field filters (top-level)
-  id: { operator: value }
-  createdTime: { operator: value }
-  modifiedTime: { operator: value }
+
+  systemFields: {
+    # System field filters (wrapped in systemFields)
+    id: { operator: value }
+    createdTime: { operator: value }
+    modifiedTime: { operator: value }
+  }
 }
 ```
+
+> **Note:** System fields (`id`, `createdTime`, `modifiedTime`) must be placed inside the `systemFields` wrapper, not at the top level of `filtration`.
 
 ---
 
@@ -57,6 +61,8 @@ filtration: {
 |----------|-------------|---------|
 | `equal` | Exact match | `{ equal: "John Doe" }` |
 | `notEqual` | Not equal | `{ notEqual: "Admin" }` |
+| `contains` | Substring match (case-insensitive) | `{ contains: "corp" }` |
+| `notContains` | Does not contain substring | `{ notContains: "test" }` |
 | `in` | Value is in array | `{ in: ["Active", "Pending"] }` |
 | `notIn` | Value is not in array | `{ notIn: ["Inactive", "Cancelled"] }` |
 
@@ -205,8 +211,10 @@ query {
       perPage: 20
       page: 1
       filtration: {
-        createdTime: { greater: "2023-01-01T00:00:00Z" }
-        modifiedTime: { lower: "2023-12-31T23:59:59Z" }
+        systemFields: {
+          createdTime: { greater: "2023-01-01T00:00:00Z" }
+          modifiedTime: { lower: "2023-12-31T23:59:59Z" }
+        }
       }
     ) {
       id
@@ -286,6 +294,67 @@ query {
 
 ---
 
+## Null Check Filtering
+
+### Available Operators
+
+These operators work on all field types:
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `isNull` | Field is null or undefined | `{ isNull: true }` |
+| `isNotNull` | Field is not null | `{ isNotNull: true }` |
+
+### Examples
+
+**Find records with missing email:**
+```graphql
+query {
+  Customer {
+    getMany(
+      perPage: 20
+      page: 1
+      filtration: {
+        fields: {
+          email: { isNull: true }
+        }
+      }
+    ) {
+      id
+      fields {
+        name
+        email
+      }
+    }
+  }
+}
+```
+
+**Find records with assigned owner:**
+```graphql
+query {
+  Customer {
+    getMany(
+      perPage: 20
+      page: 1
+      filtration: {
+        fields: {
+          owner: { isNotNull: true }
+        }
+      }
+    ) {
+      id
+      fields {
+        name
+        owner
+      }
+    }
+  }
+}
+```
+
+---
+
 ## Array Filtering
 
 ### Multi-Select Fields
@@ -338,7 +407,9 @@ query {
       perPage: 10
       page: 1
       filtration: {
-        id: { in: ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439012"] }
+        systemFields: {
+          id: { in: ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439012"] }
+        }
       }
     ) {
       id
@@ -358,7 +429,9 @@ query {
       perPage: 15
       page: 1
       filtration: {
-        createdTime: { greater: "2023-01-01T00:00:00Z" }
+        systemFields: {
+          createdTime: { greater: "2023-01-01T00:00:00Z" }
+        }
       }
     ) {
       id
@@ -379,7 +452,9 @@ query {
       perPage: 20
       page: 1
       filtration: {
-        modifiedTime: { greater: "2023-01-15T00:00:00Z" }
+        systemFields: {
+          modifiedTime: { greater: "2023-01-15T00:00:00Z" }
+        }
       }
     ) {
       id
@@ -417,7 +492,9 @@ query {
           lastContactDate: { greater: "2023-01-01T00:00:00Z" }
           # Has assigned sales rep
         }
-        createdTime: { greater: "2023-01-01T00:00:00Z" }
+        systemFields: {
+          createdTime: { greater: "2023-01-01T00:00:00Z" }
+        }
       }
     ) {
       id
@@ -538,4 +615,4 @@ filtration: {
 
 ---
 
-<sub align="center">© 2025 InflowCRM &middot; GraphQL Filtering Guide</sub>
+<sub align="center">© 2026 InflowCRM &middot; GraphQL Filtering Guide</sub>

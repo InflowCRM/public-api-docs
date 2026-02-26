@@ -1077,4 +1077,4 @@ mutation CreateCustomerWithFragment {
 
 ---
 
-<sub align="center">© 2025 InflowCRM &middot; GraphQL Mutation Examples</sub>
+<sub align="center">© 2026 InflowCRM &middot; GraphQL Mutation Examples</sub>

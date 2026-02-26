@@ -841,4 +841,4 @@ function isValidEmail(email) {
 
 ---
 
-<sub align="center">© 2025 InflowCRM &middot; GraphQL Error Handling</sub>
+<sub align="center">© 2026 InflowCRM &middot; GraphQL Error Handling</sub>

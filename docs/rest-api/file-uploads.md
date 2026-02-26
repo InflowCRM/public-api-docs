@@ -86,4 +86,17 @@ fetch('https://srv.inflowcrm.pl/api/createRecord', {
 
 ---
 
-_For more details on modules and field types, see [modules.md](./modules.md)._
+---
+
+## 📥 Downloading Files
+
+To download files attached to records, use the dedicated file endpoints:
+
+- **List files:** `GET /api/{module}/{recordId}/files` — returns metadata for all files on a record
+- **Download file:** `GET /api/files/{fileId}/download` — streams the file binary with proper Content-Disposition headers
+
+See [Endpoints Reference](docs/rest-api/endpoints.md#get-apimodulerecordidfiles) for full documentation.
+
+---
+
+_For more details on modules and field types, see [modules.md](docs/rest-api/modules.md)._

@@ -34,6 +34,8 @@ tags:
     description: User management endpoints
   - name: Utility
     description: Miscellaneous and validation endpoints
+  - name: Files
+    description: File listing and download endpoints
   - name: Webhooks
     description: Webhook management endpoints
 paths:
@@ -41,6 +43,22 @@ paths:
     post:
       tags: [Webhooks]
       summary: Create webhook subscription
+      description: |
+        Subscribe to webhook events for a specific module. InflowCRM will send HTTP POST requests to your hookUrl when the subscribed event occurs.
+
+        **Webhook Security:**
+        - All webhook payloads include an `X-Webhook-Signature` header for HMAC-SHA256 verification
+        - Use the `hmacSecret` (provided or auto-generated) to verify webhook authenticity
+        - Always validate signatures to prevent spoofing attacks
+
+        **Retry Policy:**
+        - Failed webhooks are retried with exponential backoff
+        - Maximum 5 retry attempts
+        - Webhooks failing after 5 attempts are logged and require manual intervention
+
+        **Rate Limits:**
+        - Maximum 25 subscriptions per module per event type
+        - Maximum 100 total subscriptions per account
       operationId: createWebhookSubscription
       security: [{ ApiKeyAuth: [] }]
       requestBody:
@@ -49,9 +67,23 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/SubscribeWebhookRequest'
+            examples:
+              customerCreate:
+                summary: Subscribe to customer creation events
+                value:
+                  event: "create"
+                  hookUrl: "https://your-app.com/webhooks/customer-created"
+                  module: "customer"
+              orderUpdateWithHmac:
+                summary: Subscribe to order updates with custom HMAC secret
+                value:
+                  event: "update"
+                  hookUrl: "https://your-app.com/webhooks/order-updated"
+                  module: "order"
+                  hmacSecret: "your-secure-random-secret-at-least-32-chars"
       responses:
         '201':
-          description: Subscription created
+          description: Subscription created successfully
           content:
             application/json:
               schema:
@@ -62,13 +94,206 @@ paths:
                     properties:
                       id:
                         type: string
-                        example: uuid-subscription-id
+                        format: uuid
+                        description: Unique subscription identifier
+                        example: "550e8400-e29b-41d4-a716-446655440000"
+                      hmacSecret:
+                        type: string
+                        description: HMAC secret for signature verification (only returned on creation)
+                        example: "auto-generated-secret-if-not-provided"
+              examples:
+                subscriptionCreated:
+                  summary: Subscription created with auto-generated secret
+                  value:
+                    data:
+                      id: "550e8400-e29b-41d4-a716-446655440000"
+                      hmacSecret: "auto-generated-secure-secret-string"
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':
           $ref: '#/components/responses/RateLimit'
+      callbacks:
+        webhookEvent:
+          '{$request.body#/hookUrl}':
+            post:
+              summary: Webhook event notification
+              description: |
+                InflowCRM sends this POST request to your hookUrl when the subscribed event occurs.
+
+                **Signature Verification:**
+                1. Extract the signature from `X-Webhook-Signature` header
+                2. Compute HMAC-SHA256 of the raw request body using your secret
+                3. Compare computed signature with the header value
+
+                **Example verification (Node.js):**
+                ```javascript
+                const crypto = require('crypto');
+                const signature = req.headers['x-webhook-signature'];
+                const computed = 'sha256=' + crypto
+                  .createHmac('sha256', hmacSecret)
+                  .update(JSON.stringify(req.body))
+                  .digest('hex');
+                const isValid = crypto.timingSafeEqual(
+                  Buffer.from(signature),
+                  Buffer.from(computed)
+                );
+                ```
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      required: [id, event, module, data, timestamp]
+                      properties:
+                        id:
+                          type: string
+                          description: Record ID
+                          example: "507f1f77bcf86cd799439011"
+                        event:
+                          type: string
+                          enum: [create, update, delete]
+                          description: Event type that triggered the webhook
+                          example: "create"
+                        module:
+                          type: string
+                          description: Module name
+                          example: "customer"
+                        data:
+                          type: object
+                          description: Complete record data with API field names
+                          additionalProperties: true
+                          example:
+                            id: "507f1f77bcf86cd799439011"
+                            name: "John Doe"
+                            email: "john@example.com"
+                            status: "active"
+                            createdAt: "2025-01-07T10:00:00Z"
+                        diff:
+                          type: array
+                          description: Array of changes (only present for 'update' events)
+                          items:
+                            type: object
+                            properties:
+                              path:
+                                type: string
+                                description: Field path that changed
+                                example: "email"
+                              from:
+                                description: Previous value
+                                example: "old@example.com"
+                              to:
+                                description: New value
+                                example: "new@example.com"
+                          example:
+                            - path: "email"
+                              from: "old@example.com"
+                              to: "new@example.com"
+                            - path: "status"
+                              from: "pending"
+                              to: "active"
+                        timestamp:
+                          type: string
+                          format: date-time
+                          description: When the event occurred
+                          example: "2025-01-07T10:00:00Z"
+                        subscriptionId:
+                          type: string
+                          format: uuid
+                          description: ID of the subscription that triggered this webhook
+                          example: "550e8400-e29b-41d4-a716-446655440000"
+                    examples:
+                      createEvent:
+                        summary: Record creation event
+                        value:
+                          id: "507f1f77bcf86cd799439011"
+                          event: "create"
+                          module: "customer"
+                          data:
+                            id: "507f1f77bcf86cd799439011"
+                            name: "John Doe"
+                            email: "john@example.com"
+                            status: "active"
+                            createdAt: "2025-01-07T10:00:00Z"
+                          timestamp: "2025-01-07T10:00:00Z"
+                          subscriptionId: "550e8400-e29b-41d4-a716-446655440000"
+                      updateEvent:
+                        summary: Record update event with diff
+                        value:
+                          id: "507f1f77bcf86cd799439011"
+                          event: "update"
+                          module: "customer"
+                          data:
+                            id: "507f1f77bcf86cd799439011"
+                            name: "John Doe"
+                            email: "new@example.com"
+                            status: "active"
+                            modifiedAt: "2025-01-07T15:30:00Z"
+                          diff:
+                            - path: "email"
+                              from: "old@example.com"
+                              to: "new@example.com"
+                          timestamp: "2025-01-07T15:30:00Z"
+                          subscriptionId: "550e8400-e29b-41d4-a716-446655440000"
+                      deleteEvent:
+                        summary: Record deletion event
+                        value:
+                          id: "507f1f77bcf86cd799439011"
+                          event: "delete"
+                          module: "customer"
+                          data:
+                            id: "507f1f77bcf86cd799439011"
+                          timestamp: "2025-01-07T16:00:00Z"
+                          subscriptionId: "550e8400-e29b-41d4-a716-446655440000"
+              parameters:
+                - name: X-Webhook-Signature
+                  in: header
+                  required: true
+                  description: "HMAC-SHA256 signature of the request body (format: sha256=hex_digest)"
+                  schema:
+                    type: string
+                    example: "sha256=5d41402abc4b2a76b9719d911017c592"
+                - name: X-Request-Id
+                  in: header
+                  required: true
+                  description: Unique request ID for tracking and idempotency
+                  schema:
+                    type: string
+                    format: uuid
+                    example: "550e8400-e29b-41d4-a716-446655440000"
+              responses:
+                '200':
+                  description: Webhook received and processed successfully
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        properties:
+                          received:
+                            type: boolean
+                            example: true
+                '401':
+                  description: Invalid signature - webhook rejected
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        properties:
+                          error:
+                            type: string
+                            example: "Invalid webhook signature"
+                '500':
+                  description: Webhook processing failed - will be retried
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        properties:
+                          error:
+                            type: string
+                            example: "Internal server error"
   /webhooks:
     get:
       tags: [Webhooks]
@@ -199,6 +424,93 @@ paths:
                     $ref: '#/components/schemas/Meta'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/getProcessesForModule:
+    post:
+      tags: [Modules]
+      summary: Get available processes for a module
+      description: |
+        Returns all available processes for the specified module. Currently supported for `order` and `potential` modules.
+
+        **Use Cases:**
+        - Retrieve available order stages and workflows
+        - Get potential/lead process definitions
+        - Understand module-specific business processes
+
+        **Returns:** List of processes with their stages and system labels.
+      operationId: getProcessesForModule
+      security: [{ ApiKeyAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [module]
+              properties:
+                module:
+                  type: string
+                  description: Module name (currently supports 'order' and 'potential')
+                  enum: [order, potential]
+                  example: order
+            examples:
+              orderModule:
+                summary: Get processes for order module
+                value:
+                  module: order
+              potentialModule:
+                summary: Get processes for potential module
+                value:
+                  module: potential
+      responses:
+        '200':
+          description: List of available processes for the module
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique process identifier
+                          example: "507f1f77bcf86cd799439011"
+                        systemLabel:
+                          type: string
+                          description: Process name/label
+                          example: "Standard Sales Process"
+                        stagesNames:
+                          type: array
+                          description: Ordered list of stage names in the process
+                          items:
+                            type: string
+                          example: ["New", "Qualified", "Proposal", "Negotiation", "Closed Won", "Closed Lost"]
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+              examples:
+                orderProcesses:
+                  summary: Order processes response
+                  value:
+                    data:
+                      - id: "507f1f77bcf86cd799439011"
+                        systemLabel: "Standard Order Process"
+                        stagesNames: ["New", "Processing", "Shipped", "Delivered", "Completed"]
+                      - id: "507f1f77bcf86cd799439012"
+                        systemLabel: "Express Order Process"
+                        stagesNames: ["New", "Express Processing", "Shipped", "Delivered"]
+                    meta:
+                      deprecation: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimit'
   /api/getUserList:
     get:
       tags: [Users]
@@ -394,7 +706,7 @@ paths:
         - name: id
           in: path
           required: true
-          description: Record ID (MongoDB ObjectId)
+          description: Record ID
           schema:
             type: string
             example: 507f1f77bcf86cd799439011
@@ -581,6 +893,249 @@ paths:
                     $ref: '#/components/schemas/Meta'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/getUser/{id}:
+    get:
+      tags: [Users]
+      summary: Get a single user by ID
+      operationId: getUser
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID (MongoDB ObjectId)
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+  /api/updateUser/{id}:
+    patch:
+      tags: [Users]
+      summary: Update custom fields on a user
+      description: |
+        Updates user custom fields. Only fields with an API field name can be modified. System and security fields cannot be changed via this endpoint.
+      operationId: updateUser
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID (MongoDB ObjectId)
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Key-value pairs of fields to update. Blocked fields are silently ignored.
+              additionalProperties: true
+              example:
+                phone: "+48987654321"
+                position: "Senior Sales Manager"
+      responses:
+        '200':
+          description: Updated user object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+  /api/{module}/{recordId}/files:
+    get:
+      tags: [Files]
+      summary: List files attached to a record
+      operationId: listRecordFiles
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - name: module
+          in: path
+          required: true
+          description: Module name
+          schema:
+            type: string
+            example: customer
+        - name: recordId
+          in: path
+          required: true
+          description: Record ID (MongoDB ObjectId)
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        '200':
+          description: List of file metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FileMetadata'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+  /api/files/{fileId}/download:
+    get:
+      tags: [Files]
+      summary: Download a file by ID
+      description: |
+        Streams the file binary. Returns 404 (not 403) when the user has no access to prevent information leakage.
+      operationId: downloadFile
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          description: File ID (MongoDB ObjectId)
+          schema:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        '200':
+          description: File binary stream
+          headers:
+            Content-Disposition:
+              description: "Attachment filename (RFC 5987 UTF-8 encoded)"
+              schema:
+                type: string
+                example: "attachment; filename*=UTF-8''contract.pdf"
+            X-Content-Type-Options:
+              description: Prevents MIME-type sniffing
+              schema:
+                type: string
+                example: nosniff
+            Cache-Control:
+              description: Caching directive
+              schema:
+                type: string
+                example: "no-cache, no-store, must-revalidate"
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+  /api/make/getModuleFields:
+    post:
+      tags: [Utility]
+      summary: Get module fields in Make.com format
+      description: |
+        Returns field metadata for a module formatted for Make.com dynamic field discovery.
+        MultiRelation fields are excluded. Required flags depend on the requestType context.
+      operationId: getMakeModuleFields
+      security: [{ ApiKeyAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [module, requestType]
+              properties:
+                module:
+                  type: string
+                  description: Module name
+                  example: customer
+                requestType:
+                  type: string
+                  description: "Operation context (e.g., 'createRecord', 'updateRecord')"
+                  example: createRecord
+      responses:
+        '200':
+          description: List of fields in Make.com format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          description: API field name
+                          example: companyName
+                        label:
+                          type: string
+                          description: Display label
+                          example: "Nazwa firmy"
+                        type:
+                          type: string
+                          description: "Make.com field type"
+                          enum: [text, number, date, boolean, select]
+                          example: text
+                        required:
+                          type: boolean
+                          description: Whether the field is required (true only for createRecord)
+                          example: true
+                        options:
+                          type: array
+                          description: Available options (for select type fields)
+                          items:
+                            type: object
+                            properties:
+                              value:
+                                type: string
+                              label:
+                                type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimit'
 components:
   schemas:
     SubscribeWebhookRequest:
@@ -656,43 +1211,435 @@ components:
               example: false
     Meta:
       type: object
+      description: Response metadata including pagination and deprecation warnings
       properties:
         pagination:
           type: object
+          nullable: true
+          description: Pagination information (only present for paginated responses)
           properties:
-            page: { type: integer }
-            limit: { type: integer }
-            total: { type: integer }
-            pages: { type: integer }
+            page:
+              type: integer
+              minimum: 1
+              description: Current page number (1-indexed)
+              example: 1
+            limit:
+              type: integer
+              minimum: 1
+              maximum: 200
+              description: Number of records per page
+              example: 50
+            total:
+              type: integer
+              minimum: 0
+              description: Total number of records matching the query
+              example: 127
+            pages:
+              type: integer
+              minimum: 0
+              description: Total number of pages
+              example: 3
         deprecation:
           type: object
+          nullable: true
+          description: Deprecation warning if endpoint is deprecated
           properties:
-            message: { type: string }
-            sunset_date: { type: string, format: date }
-            replacement_endpoint: { type: string }
+            message:
+              type: string
+              description: Human-readable deprecation message
+              example: "This endpoint is deprecated and will be removed in v3.0"
+            sunset_date:
+              type: string
+              format: date
+              description: Date when the endpoint will be removed (ISO 8601)
+              example: "2025-12-31"
+            replacement_endpoint:
+              type: string
+              description: Path to the replacement endpoint
+              example: "/api/v2/searchRecords"
     User:
       type: object
+      description: User account information
       properties:
-        id: { type: string }
-        systemLabel: { type: string }
-        email: { type: string }
+        id:
+          type: string
+          description: Unique user identifier
+          example: "507f1f77bcf86cd799439011"
+        systemLabel:
+          type: string
+          description: User's display name
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "john.doe@example.com"
     ModuleField:
       type: object
+      description: Metadata for a single field in a module
       properties:
-        apiFieldName: { type: string }
-        description: { type: string }
-        decimal: { type: integer }
-        length: { type: integer }
-        type: { type: string }
-        label: { type: string }
-        required: { type: boolean }
-        relationField: { type: string }
+        apiFieldName:
+          type: string
+          description: Field name to use in API requests (must be set in InflowCRM UI)
+          example: "customerEmail"
+        description:
+          type: string
+          nullable: true
+          description: Human-readable description of the field
+          example: "Customer's primary email address"
+        decimal:
+          type: integer
+          nullable: true
+          description: Number of decimal places for numeric fields
+          example: 2
+        length:
+          type: integer
+          nullable: true
+          description: Maximum length for string fields
+          example: 255
+        type:
+          type: string
+          description: Field data type
+          enum: [string, number, date, datetime, boolean, file, relation, picklist, text, email, phone, url]
+          example: "email"
+        label:
+          type: string
+          description: Display label for the field
+          example: "Email Address"
+        required:
+          type: boolean
+          description: Whether the field is required when creating/updating records
+          example: true
+        relationField:
+          type: string
+          nullable: true
+          description: Field name in the related module (for relation fields)
+          example: "customerId"
         pickListValues:
           type: array
-          items: { type: string }
-        relatedModule: { type: string }
-        relationFieldName: { type: string }
-        defaultValue: {}
+          nullable: true
+          description: Available values for picklist/dropdown fields
+          items:
+            type: string
+          example: ["active", "inactive", "pending"]
+        relatedModule:
+          type: string
+          nullable: true
+          description: Name of the related module (for relation fields)
+          example: "customer"
+        relationFieldName:
+          type: string
+          nullable: true
+          description: Name of the relation field
+          example: "assignedCustomer"
+        defaultValue:
+          nullable: true
+          description: Default value for the field if not provided
+          example: "active"
+
+    FileMetadata:
+      type: object
+      description: Metadata for a file attached to a record
+      properties:
+        id:
+          type: string
+          description: Unique file identifier
+          example: "507f1f77bcf86cd799439011"
+        fileName:
+          type: string
+          description: Original file name
+          example: "contract.pdf"
+        fileSize:
+          type: integer
+          description: File size in bytes
+          example: 204800
+        mimeType:
+          type: string
+          description: MIME type of the file
+          example: "application/pdf"
+        fileExtension:
+          type: string
+          description: File extension
+          example: "pdf"
+        createdTime:
+          type: string
+          format: date-time
+          description: When the file was uploaded
+          example: "2025-01-15T10:00:00.000Z"
+
+    # --- Base Record Schema ---
+    BaseRecord:
+      type: object
+      description: Base schema for all records with common fields
+      required: [id]
+      properties:
+        id:
+          type: string
+          description: Unique record identifier
+          example: "507f1f77bcf86cd799439011"
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the record was created
+          example: "2025-01-07T10:00:00Z"
+        modifiedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the record was last modified
+          example: "2025-01-07T15:30:00Z"
+        createdBy:
+          type: string
+          description: ID of the user who created the record
+          example: "507f1f77bcf86cd799439099"
+        modifiedBy:
+          type: string
+          description: ID of the user who last modified the record
+          example: "507f1f77bcf86cd799439099"
+
+    # --- Module-Specific Record Schemas ---
+    CustomerRecord:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+        - type: object
+          description: Customer record with common customer fields
+          properties:
+            name:
+              type: string
+              description: Customer name (company or individual)
+              maxLength: 255
+              example: "Acme Corporation"
+            email:
+              type: string
+              format: email
+              description: Primary email address
+              example: "contact@acme.com"
+            phone:
+              type: string
+              description: Primary phone number
+              example: "+48123456789"
+            status:
+              type: string
+              description: Customer status
+              enum: [active, inactive, pending, archived]
+              example: "active"
+            customerNip:
+              type: string
+              description: Tax identification number (NIP for Polish companies)
+              pattern: '^\d{10}$'
+              example: "1234567890"
+            customerCity:
+              type: string
+              description: City
+              example: "Warsaw"
+            customerStreet:
+              type: string
+              description: Street address
+              example: "Main Street 123"
+            customerPostalCode:
+              type: string
+              description: Postal code
+              example: "00-001"
+            customerCountry:
+              type: string
+              description: Country
+              example: "Poland"
+
+    OrderRecord:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+        - type: object
+          description: Order record with common order fields
+          properties:
+            orderNumber:
+              type: string
+              description: Unique order number
+              example: "ORD-2025-00123"
+            customer:
+              type: string
+              description: Related customer ID
+              example: "507f1f77bcf86cd799439011"
+            status:
+              type: string
+              description: Order status
+              enum: [new, processing, shipped, delivered, completed, cancelled]
+              example: "processing"
+            totalAmount:
+              type: number
+              format: double
+              description: Total order amount
+              example: 1250.50
+            currency:
+              type: string
+              description: Currency code (ISO 4217)
+              pattern: '^[A-Z]{3}$'
+              example: "PLN"
+            orderDate:
+              type: string
+              format: date-time
+              description: Date when the order was placed
+              example: "2025-01-07T10:00:00Z"
+            deliveryDate:
+              type: string
+              format: date-time
+              nullable: true
+              description: Expected or actual delivery date
+              example: "2025-01-14T10:00:00Z"
+            processId:
+              type: string
+              description: ID of the process/workflow this order follows
+              example: "507f1f77bcf86cd799439011"
+            stageId:
+              type: string
+              description: Current stage ID in the process
+              example: "507f1f77bcf86cd799439012"
+
+    LeadRecord:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+        - type: object
+          description: Lead/Potential record for sales opportunities
+          properties:
+            leadName:
+              type: string
+              description: Lead or company name
+              maxLength: 255
+              example: "Potential Client Ltd"
+            contactPerson:
+              type: string
+              description: Name of the contact person
+              example: "John Smith"
+            email:
+              type: string
+              format: email
+              description: Contact email address
+              example: "john.smith@potential.com"
+            phone:
+              type: string
+              description: Contact phone number
+              example: "+48987654321"
+            status:
+              type: string
+              description: Lead status
+              enum: [new, contacted, qualified, proposal, negotiation, won, lost]
+              example: "qualified"
+            estimatedValue:
+              type: number
+              format: double
+              nullable: true
+              description: Estimated deal value
+              example: 50000.00
+            probability:
+              type: integer
+              minimum: 0
+              maximum: 100
+              nullable: true
+              description: Win probability percentage
+              example: 75
+            expectedCloseDate:
+              type: string
+              format: date
+              nullable: true
+              description: Expected closing date
+              example: "2025-02-15"
+            source:
+              type: string
+              description: Lead source
+              enum: [website, referral, cold_call, event, social_media, other]
+              example: "website"
+
+    ContactRecord:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+        - type: object
+          description: Contact person record
+          properties:
+            firstName:
+              type: string
+              description: Contact's first name
+              maxLength: 100
+              example: "Jane"
+            lastName:
+              type: string
+              description: Contact's last name
+              maxLength: 100
+              example: "Doe"
+            email:
+              type: string
+              format: email
+              description: Email address
+              example: "jane.doe@example.com"
+            phone:
+              type: string
+              description: Phone number
+              example: "+48111222333"
+            mobile:
+              type: string
+              nullable: true
+              description: Mobile phone number
+              example: "+48999888777"
+            position:
+              type: string
+              nullable: true
+              description: Job position/title
+              example: "Sales Manager"
+            company:
+              type: string
+              nullable: true
+              description: Related company/customer ID
+              example: "507f1f77bcf86cd799439011"
+            isPrimary:
+              type: boolean
+              description: Whether this is the primary contact for the company
+              example: true
+
+    TaskRecord:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+        - type: object
+          description: Task record for activity tracking
+          properties:
+            title:
+              type: string
+              description: Task title
+              maxLength: 255
+              example: "Follow up with customer"
+            description:
+              type: string
+              nullable: true
+              description: Detailed task description
+              example: "Call customer to discuss proposal details"
+            status:
+              type: string
+              description: Task status
+              enum: [todo, in_progress, completed, cancelled]
+              example: "todo"
+            priority:
+              type: string
+              description: Task priority
+              enum: [low, medium, high, urgent]
+              example: "high"
+            dueDate:
+              type: string
+              format: date-time
+              nullable: true
+              description: Task due date
+              example: "2025-01-10T17:00:00Z"
+            assignedTo:
+              type: string
+              nullable: true
+              description: ID of the user assigned to this task
+              example: "507f1f77bcf86cd799439099"
+            relatedRecord:
+              type: string
+              nullable: true
+              description: ID of related record (customer, order, etc.)
+              example: "507f1f77bcf86cd799439011"
+            relatedModule:
+              type: string
+              nullable: true
+              description: Module name of the related record
+              example: "customer"
+
     CreateOrUpdateRecordRequest:
       type: object
       required: [module]
@@ -712,15 +1659,36 @@ components:
       properties:
         field:
           type: string
-          description: "Field name to apply the filter on."
+          description: "Field name to apply the filter on (API field name)."
           example: "customerNip"
         condition:
           type: string
-          enum: [equal, notEqual, greater, greaterOrEqual, lower, lowerOrEqual, in, notIn]
-          description: "Filtering condition (operator)."
+          enum: [equal, notEqual, greater, greaterOrEqual, lower, lowerOrEqual, in, notIn, isEmpty, isNotEmpty]
+          description: |
+            Filtering condition (operator):
+            - `equal`: Exact match
+            - `notEqual`: Not equal to value
+            - `greater`: Greater than (numeric/date fields)
+            - `greaterOrEqual`: Greater than or equal
+            - `lower`: Less than
+            - `lowerOrEqual`: Less than or equal
+            - `in`: Value in array (provide array for value)
+            - `notIn`: Value not in array
+            - `isEmpty`: Field is null or empty (value should be true/false)
+            - `isNotEmpty`: Field is not null or empty (value should be true/false)
           example: "equal"
         value:
-          description: "Value to compare against. For `in`/`notIn`, provide an array."
+          description: |
+            Value to compare against. Type depends on condition:
+            - For `in`/`notIn`: provide an array
+            - For `isEmpty`/`isNotEmpty`: provide boolean (true/false)
+            - For others: provide appropriate scalar value (string, number, date)
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: array
+              items: {}
           example: "8943092379"
 
     AdvancedFilters:
@@ -809,88 +1777,433 @@ components:
         - Use `advancedFilters` for advanced conditions.
     RecordResponse:
       type: object
+      description: Single record response with metadata
       properties:
         data:
           type: object
+          description: |
+            Record data with API field names. Structure varies by module.
+            Common fields include id, createdAt, modifiedAt, plus module-specific fields.
+            Only fields with an 'Api field name' set in the InflowCRM UI will be included.
+          properties:
+            id:
+              type: string
+              description: Unique record identifier
+              example: "507f1f77bcf86cd799439011"
+            createdAt:
+              type: string
+              format: date-time
+              description: Timestamp when the record was created
+              example: "2025-01-07T10:00:00Z"
+            modifiedAt:
+              type: string
+              format: date-time
+              description: Timestamp when the record was last modified
+              example: "2025-01-07T15:30:00Z"
+          additionalProperties: true
+          example:
+            id: "507f1f77bcf86cd799439011"
+            name: "John Doe"
+            email: "john@example.com"
+            status: "active"
+            createdAt: "2025-01-07T10:00:00Z"
+            modifiedAt: "2025-01-07T15:30:00Z"
         meta:
           $ref: '#/components/schemas/Meta'
     SearchRecordsResponse:
       type: object
+      description: Paginated list of records with metadata
       properties:
         data:
           type: array
+          description: Array of record objects matching the search criteria
           items:
             type: object
+            description: Record with module-specific fields
+            properties:
+              id:
+                type: string
+                description: Unique record identifier
+                example: "507f1f77bcf86cd799439011"
+              createdAt:
+                type: string
+                format: date-time
+                description: Creation timestamp
+                example: "2025-01-07T10:00:00Z"
+              modifiedAt:
+                type: string
+                format: date-time
+                description: Last modification timestamp
+                example: "2025-01-07T15:30:00Z"
+            additionalProperties: true
+          example:
+            - id: "507f1f77bcf86cd799439011"
+              name: "John Doe"
+              email: "john@example.com"
+              status: "active"
+              createdAt: "2025-01-07T10:00:00Z"
+            - id: "507f1f77bcf86cd799439012"
+              name: "Jane Smith"
+              email: "jane@example.com"
+              status: "pending"
+              createdAt: "2025-01-08T14:30:00Z"
         meta:
           $ref: '#/components/schemas/Meta'
+
+    # --- Error Schemas (RFC 9457 Problem Details) ---
+    ProblemDetails:
+      type: object
+      description: |
+        Error response following RFC 9457 "Problem Details for HTTP APIs" standard.
+        Provides machine-readable and human-readable error information.
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URI reference identifying the problem type
+          example: "https://api.inflowcrm.pl/errors/validation-error"
+        title:
+          type: string
+          description: Short, human-readable summary of the problem type
+          example: "Validation Error"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        detail:
+          type: string
+          description: Human-readable explanation specific to this occurrence
+          example: "The 'email' field must be a valid email address"
+        instance:
+          type: string
+          format: uri
+          description: URI reference identifying the specific occurrence of the problem
+          example: "https://srv.inflowcrm.pl/api/createRecord"
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error occurred
+          example: "2025-01-07T10:00:00Z"
+        invalidParams:
+          type: array
+          description: Details about invalid parameters (for validation errors)
+          items:
+            type: object
+            required: [name, reason]
+            properties:
+              name:
+                type: string
+                description: Name of the invalid parameter
+                example: "email"
+              reason:
+                type: string
+                description: Why the parameter is invalid
+                example: "Must be a valid email format"
+              value:
+                description: The invalid value provided (optional)
+                example: "invalid-email"
+
+    ErrorResponse:
+      type: object
+      description: Legacy error response format (deprecated, use ProblemDetails for new integrations)
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              description: Human-readable error message
+              example: "Validation failed for one or more fields"
+            details:
+              type: object
+              description: Additional context about the error
+              nullable: true
+              additionalProperties: true
+              example:
+                fields:
+                  - field: "email"
+                    message: "Must be a valid email address"
+            timestamp:
+              type: string
+              format: date-time
+              description: When the error occurred
+              example: "2025-01-07T10:00:00Z"
+
   securitySchemes:
     ApiKeyAuth:
       type: apiKey
       in: header
       name: x-api-key
+      description: |
+        API Key authentication for InflowCRM Public API.
+
+        **How to obtain an API Key:**
+        1. Log in to your InflowCRM account
+        2. Navigate to Settings > API Keys
+        3. Generate a new API key for your integration
+
+        **Security Best Practices:**
+        - Keep your API key confidential
+        - Store in environment variables or secrets manager
+        - Rotate keys periodically (recommended: every 90 days)
+        - Use HTTPS for all requests
+        - Never commit keys to version control
+
+        **Rate Limiting:**
+        - 300 requests per 5 minutes per (apiKey + IP)
+        - Rate limit headers included in all responses
+        - Implement exponential backoff for retries
+
+        **Example:**
+        ```bash
+        curl -H "x-api-key: your_api_key_here" \
+          https://srv.inflowcrm.pl/api/getBundleModuleNames
+        ```
+
+  headers:
+    X-RateLimit-Limit:
+      description: Maximum number of requests allowed in the time window
+      schema:
+        type: integer
+        example: 300
+    X-RateLimit-Remaining:
+      description: Number of requests remaining in current time window
+      schema:
+        type: integer
+        example: 275
+    X-RateLimit-Reset:
+      description: Unix timestamp when the rate limit window resets
+      schema:
+        type: integer
+        example: 1704628800
+    X-Request-Id:
+      description: Unique request identifier for tracking and debugging
+      schema:
+        type: string
+        format: uuid
+        example: "550e8400-e29b-41d4-a716-446655440000"
+    X-Webhook-Signature:
+      description: HMAC-SHA256 signature of the webhook payload for verification
+      schema:
+        type: string
+        example: "sha256=5d41402abc4b2a76b9719d911017c592"
+
   responses:
     Unauthorized:
       description: Unauthorized - missing or invalid API key
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              error:
-                type: object
-                properties:
-                  code: { type: string, example: UNAUTHORIZED }
-                  message: { type: string }
-                  details: {}
+            oneOf:
+              - $ref: '#/components/schemas/ErrorResponse'
+              - $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            missingApiKey:
+              summary: Missing API key
+              value:
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "Missing x-api-key header"
+                  details: null
+                  timestamp: "2025-01-07T10:00:00Z"
+            invalidApiKey:
+              summary: Invalid API key
+              value:
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "Invalid API key"
+                  details:
+                    hint: "Check that your API key is correct and has not expired"
+                  timestamp: "2025-01-07T10:00:00Z"
+            rfc9457Format:
+              summary: RFC 9457 format (recommended for new integrations)
+              value:
+                type: "https://api.inflowcrm.pl/errors/unauthorized"
+                title: "Unauthorized"
+                status: 401
+                detail: "The provided API key is invalid or has expired"
+                instance: "https://srv.inflowcrm.pl/api/createRecord"
+                timestamp: "2025-01-07T10:00:00Z"
     ValidationError:
-      description: Validation error
+      description: Validation error - request data does not meet requirements
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              error:
-                type: object
-                properties:
-                  code: { type: string, example: VALIDATION_ERROR }
-                  message: { type: string }
-                  details: {}
+            oneOf:
+              - $ref: '#/components/schemas/ErrorResponse'
+              - $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            missingRequiredField:
+              summary: Missing required field
+              value:
+                error:
+                  code: "VALIDATION_ERROR"
+                  message: "Missing required fields"
+                  details:
+                    fields: ["module", "data"]
+                  timestamp: "2025-01-07T10:00:00Z"
+            invalidModule:
+              summary: Invalid module name
+              value:
+                error:
+                  code: "VALIDATION_ERROR"
+                  message: "Module 'invalid_module' does not exist"
+                  details:
+                    field: "module"
+                    allowedValues: ["customer", "lead", "order", "contact", "task"]
+                  timestamp: "2025-01-07T10:00:00Z"
+            invalidFieldFormat:
+              summary: Invalid field format (RFC 9457)
+              value:
+                type: "https://api.inflowcrm.pl/errors/validation-error"
+                title: "Validation Error"
+                status: 400
+                detail: "One or more fields contain invalid data"
+                instance: "https://srv.inflowcrm.pl/api/createRecord"
+                timestamp: "2025-01-07T10:00:00Z"
+                invalidParams:
+                  - name: "email"
+                    reason: "Must be a valid email format"
+                    value: "not-an-email"
+                  - name: "phone"
+                    reason: "Must contain only digits and + symbol"
+                    value: "abc-123"
     RateLimit:
-      description: Rate limit exceeded
+      description: Rate limit exceeded - too many requests in time window
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/X-RateLimit-Limit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/X-RateLimit-Remaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/X-RateLimit-Reset'
+        Retry-After:
+          description: Number of seconds to wait before retrying
+          schema:
+            type: integer
+            example: 60
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              error:
-                type: object
-                properties:
-                  code: { type: string, example: RATE_LIMIT_EXCEEDED }
-                  message: { type: string }
-                  details: {}
+            oneOf:
+              - $ref: '#/components/schemas/ErrorResponse'
+              - $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            rateLimitExceeded:
+              summary: Rate limit exceeded
+              value:
+                error:
+                  code: "RATE_LIMIT_EXCEEDED"
+                  message: "Rate limit of 300 requests per 5 minutes exceeded"
+                  details:
+                    limit: 300
+                    window: "5 minutes"
+                    retryAfter: 60
+                  timestamp: "2025-01-07T10:00:00Z"
+            rfc9457Format:
+              summary: RFC 9457 format with retry information
+              value:
+                type: "https://api.inflowcrm.pl/errors/rate-limit-exceeded"
+                title: "Rate Limit Exceeded"
+                status: 429
+                detail: "You have exceeded the rate limit of 300 requests per 5 minutes. Please wait 60 seconds before retrying."
+                instance: "https://srv.inflowcrm.pl/api/searchRecords"
+                timestamp: "2025-01-07T10:00:00Z"
     NotFound:
       description: Resource not found
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              error:
-                type: object
-                properties:
-                  code: { type: string, example: NOT_FOUND }
-                  message: { type: string }
-                  details: {}
+            oneOf:
+              - $ref: '#/components/schemas/ErrorResponse'
+              - $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            recordNotFound:
+              summary: Record not found
+              value:
+                error:
+                  code: "NOT_FOUND"
+                  message: "Record with ID '507f1f77bcf86cd799439011' not found"
+                  details:
+                    module: "customer"
+                    recordId: "507f1f77bcf86cd799439011"
+                  timestamp: "2025-01-07T10:00:00Z"
+            moduleNotFound:
+              summary: Module not found
+              value:
+                error:
+                  code: "NOT_FOUND"
+                  message: "Module 'invalid_module' not found in your bundle"
+                  details:
+                    module: "invalid_module"
+                    hint: "Use /api/getBundleModuleNames to see available modules"
+                  timestamp: "2025-01-07T10:00:00Z"
+            rfc9457Format:
+              summary: RFC 9457 format
+              value:
+                type: "https://api.inflowcrm.pl/errors/not-found"
+                title: "Not Found"
+                status: 404
+                detail: "The requested resource could not be found"
+                instance: "https://srv.inflowcrm.pl/api/customer/507f1f77bcf86cd799439011"
+                timestamp: "2025-01-07T10:00:00Z"
     Forbidden:
       description: Forbidden - access to module or resource denied
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              error:
-                type: object
-                properties:
-                  code: { type: string, example: FORBIDDEN }
-                  message: { type: string }
-                  details: {}
+            oneOf:
+              - $ref: '#/components/schemas/ErrorResponse'
+              - $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            moduleAccessDenied:
+              summary: Module access denied
+              value:
+                error:
+                  code: "FORBIDDEN"
+                  message: "You do not have permission to access the 'customer' module"
+                  details:
+                    module: "customer"
+                    requiredPermission: "customer:read"
+                  timestamp: "2025-01-07T10:00:00Z"
+            recordAccessDenied:
+              summary: Record access denied
+              value:
+                error:
+                  code: "FORBIDDEN"
+                  message: "You do not have permission to modify this record"
+                  details:
+                    module: "order"
+                    recordId: "507f1f77bcf86cd799439011"
+                    requiredPermission: "order:update"
+                  timestamp: "2025-01-07T10:00:00Z"
+            rfc9457Format:
+              summary: RFC 9457 format
+              value:
+                type: "https://api.inflowcrm.pl/errors/forbidden"
+                title: "Forbidden"
+                status: 403
+                detail: "You do not have permission to perform this operation"
+                instance: "https://srv.inflowcrm.pl/api/updateRecord/507f1f77bcf86cd799439011"
+                timestamp: "2025-01-07T10:00:00Z"

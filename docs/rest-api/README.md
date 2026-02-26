@@ -54,8 +54,10 @@ https://srv.inflowcrm.pl
 
 - Simple and advanced filtering for all search/count/find endpoints
 - **Record retrieval** by single ID or multiple IDs with pagination
-- Comprehensive support for filter conditions: `equal`, `notEqual`, `greater`, `greaterOrEqual`, `lower`, `lowerOrEqual`, `in`, `notIn`
+- Comprehensive support for filter conditions: `equal`, `notEqual`, `greater`, `greaterOrEqual`, `lower`, `lowerOrEqual`, `in`, `notIn`, `isEmpty`, `isNotEmpty`
 - Migration path from simple to advanced filters (backward compatible)
+- **User management** — get and update user profiles
+- **File operations** — list record files and download by ID
 - Error handling and field compatibility matrix
 - Performance best practices for filtering
 - **Real-time webhooks** for create, update, and delete events
@@ -65,12 +67,12 @@ https://srv.inflowcrm.pl
 
 ## 📚 Documentation Index
 
-- [Endpoints Reference](./endpoints.md)
-- [File Upload Guide](./file-uploads.md)
-- [Modules & Fields](./modules.md)
-- [Webhook API](./webhooks.md)
-- [Error Handling](./errors.md)
-- [Full OpenAPI 3.0 Spec](./openapi.yaml)
+- [Endpoints Reference](docs/rest-api/endpoints.md)
+- [File Upload Guide](docs/rest-api/file-uploads.md)
+- [Modules & Fields](docs/rest-api/modules.md)
+- [Webhook API](docs/rest-api/webhooks.md)
+- [Error Handling](docs/rest-api/errors.md)
+- [Full OpenAPI 3.0 Spec](docs/rest-api/openapi.yaml)
 
 ---
 
@@ -103,10 +105,10 @@ https://srv.inflowcrm.pl
 ## 📝 Next Steps
 
 - Explore endpoints and guides using the sidebar.
-- Review the [OpenAPI Spec](./openapi.yaml) for schema details.
-- See [Endpoints Reference](./endpoints.md) for all available API methods.
-- Check [webhooks.md](./webhooks.md) for real-time integration.
+- Review the [OpenAPI Spec](docs/rest-api/openapi.yaml) for schema details.
+- See [Endpoints Reference](docs/rest-api/endpoints.md) for all available API methods.
+- Check [webhooks.md](docs/rest-api/webhooks.md) for real-time integration.
 
 ---
 
-<sub align="center">© 2025 InflowCRM &middot; [View on GitHub](https://github.com/arqo/inflowcrm-public-api-docs)</sub>
+<sub align="center">© 2026 InflowCRM &middot; [View on GitHub](https://github.com/InflowCRM/public-api-docs)</sub>

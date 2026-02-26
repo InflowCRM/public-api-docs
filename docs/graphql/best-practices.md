@@ -321,8 +321,8 @@ const LIST_PAGE_SIZE = 20;
 // For dropdown/select components
 const DROPDOWN_PAGE_SIZE = 100;
 
-// For data exports
-const EXPORT_PAGE_SIZE = 500;
+// For data exports (API maximum is 200 per page)
+const EXPORT_PAGE_SIZE = 100;
 ```
 
 ### 5. Implement Client-Side Caching
@@ -912,4 +912,4 @@ Remember that GraphQL is a powerful tool, but with great power comes great respo
 
 ---
 
-<sub align="center">© 2025 InflowCRM &middot; GraphQL Best Practices</sub>
+<sub align="center">© 2026 InflowCRM &middot; GraphQL Best Practices</sub>

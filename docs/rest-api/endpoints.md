@@ -9,10 +9,12 @@ This section provides detailed documentation for every public API endpoint, incl
 ### Core API Endpoints
 - [GET /api/getBundleModuleNames](#get-apigetbundlemodulenames)
 - [GET /api/getUserList](#get-apigetuserlist)
+- [GET /api/getUser/{id}](#get-apigetuserid)
+- [PATCH /api/updateUser/{id}](#patch-apiupdateuserid)
 - [POST /api/getProcessesForModule](#post-apigetprocessesformodule)
 - [POST /api/validateApiKey](#post-apivalidateapikey)
 - [POST /api/createRecord](#post-apicreaterecord)
-- [PATCH /api/updateRecordid](#patch-apiupdaterecordid)
+- [PATCH /api/updateRecord/{id}](#patch-apiupdaterecordid)
 - [POST /api/searchRecords](#post-apisearchrecords)
 - [POST /api/findRecord](#post-apifindrecord)
 - [GET /api/{module}/{id}](#get-apimoduleid)
@@ -21,6 +23,13 @@ This section provides detailed documentation for every public API endpoint, incl
 - [POST /api/getSampleData](#post-apigetsampledata)
 - [POST /api/records/count](#post-apirecordscount)
 - [DELETE /api/{module}/{id}](#delete-apimoduleid)
+
+### File Endpoints
+- [GET /api/{module}/{recordId}/files](#get-apimodulerecordidfiles)
+- [GET /api/files/{fileId}/download](#get-apifilesfileiddownload)
+
+### Utility Endpoints
+- [POST /api/make/getModuleFields](#post-apimakegetmodulefields)
 
 ---
 
@@ -73,6 +82,95 @@ Returns all active users for the current tenant.
 
 ---
 
+## GET /api/getUser/{id}
+
+Retrieves a single user by their ID.
+
+**Headers:**
+`x-api-key: YOUR_API_KEY`
+
+**Path Parameters:**
+- `id` (string, required): User ID (MongoDB ObjectId)
+
+**Response (200 OK):**
+```json
+{
+  "data": {
+    "id": "507f1f77bcf86cd799439011",
+    "systemLabel": "Jan Kowalski",
+    "email": "jan@example.com",
+    "phone": "+48123456789",
+    "position": "Sales Manager"
+  },
+  "meta": { "deprecation": null }
+}
+```
+
+> **Note:** The response includes all user fields that have an API field name configured. System fields like password, apiKey, and security settings are never exposed.
+
+**Error Responses:**
+- **400 Bad Request**: Invalid user ID format
+- **404 Not Found**: User not found
+- **401 Unauthorized**: Missing or invalid API key
+
+**Example (curl):**
+```bash
+curl -X GET "https://srv.inflowcrm.pl/api/getUser/507f1f77bcf86cd799439011" \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+---
+
+## PATCH /api/updateUser/{id}
+
+Updates custom fields on a user profile.
+
+**Headers:**
+`x-api-key: YOUR_API_KEY`
+`Content-Type: application/json`
+
+**Path Parameters:**
+- `id` (string, required): User ID (MongoDB ObjectId)
+
+**Body:**
+```json
+{
+  "phone": "+48987654321",
+  "position": "Senior Sales Manager"
+}
+```
+
+> **Note:** Only custom fields with an API field name can be updated. System and security fields (e.g., email, password, role) cannot be modified via this endpoint.
+
+**Response (200 OK):**
+```json
+{
+  "data": {
+    "id": "507f1f77bcf86cd799439011",
+    "systemLabel": "Jan Kowalski",
+    "email": "jan@example.com",
+    "phone": "+48987654321",
+    "position": "Senior Sales Manager"
+  },
+  "meta": { "deprecation": null }
+}
+```
+
+**Error Responses:**
+- **400 Bad Request**: Empty body or no updatable fields provided
+- **404 Not Found**: User not found
+- **401 Unauthorized**: Missing or invalid API key
+
+**Example (curl):**
+```bash
+curl -X PATCH "https://srv.inflowcrm.pl/api/updateUser/507f1f77bcf86cd799439011" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "phone": "+48987654321" }'
+```
+
+---
+
 ## POST /api/getProcessesForModule
 
 Returns all available processes for a specific module.
@@ -88,6 +186,7 @@ Returns all available processes for a specific module.
 ```
 
 > **Note:** This endpoint currently supports the `order` and `potential` modules only.
+> The stage index (position in `stagesNames` array, 0-based) is used when setting a record's stage. See [Pipelines & Stages](docs/rest-api/modules.md#pipelines-amp-stages) for details.
 
 **Response:**
 ```json
@@ -187,10 +286,18 @@ curl -X POST "https://srv.inflowcrm.pl/api/createRecord" \
 **Response:**
 ```json
 {
-  "data": { /* created record object */ },
+  "data": {
+    "id": "507f1f77bcf86cd799439011",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "createdAt": "2025-01-15T10:30:00.000Z",
+    "modifiedAt": "2025-01-15T10:30:00.000Z"
+  },
   "meta": { "deprecation": null }
 }
 ```
+
+> **Note:** The response fields depend on your module configuration. Only fields with an API field name will be included.
 
 ---
 
@@ -234,7 +341,13 @@ curl -X PATCH "https://srv.inflowcrm.pl/api/updateRecord/RECORD_ID" \
 **Response:**
 ```json
 {
-  "data": { /* updated record object */ },
+  "data": {
+    "id": "507f1f77bcf86cd799439011",
+    "name": "Jane Doe",
+    "email": "john@example.com",
+    "createdAt": "2025-01-15T10:30:00.000Z",
+    "modifiedAt": "2025-01-16T14:22:00.000Z"
+  },
   "meta": { "deprecation": null }
 }
 ```
@@ -436,7 +549,14 @@ Finds a single record by filters.
 **Response:**
 ```json
 {
-  "data": { /* record object */ },
+  "data": {
+    "id": "507f1f77bcf86cd799439011",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "status": "active",
+    "createdAt": "2025-01-15T10:30:00.000Z",
+    "modifiedAt": "2025-01-15T10:30:00.000Z"
+  },
   "meta": { "deprecation": null }
 }
 ```
@@ -629,10 +749,19 @@ Returns sample data for a module.
 **Response:**
 ```json
 {
-  "data": { /* sample record object */ },
+  "data": {
+    "id": "507f1f77bcf86cd799439011",
+    "name": "Example Customer",
+    "email": "customer@example.com",
+    "status": "active",
+    "createdAt": "2025-01-10T08:00:00.000Z",
+    "modifiedAt": "2025-01-12T16:45:00.000Z"
+  },
   "meta": { "deprecation": null }
 }
 ```
+
+> **Note:** The fields returned depend on the module's configuration. This endpoint returns one sample record to help you discover the available field structure.
 
 ---
 
@@ -692,13 +821,177 @@ HTTP 204 No Content
 
 ---
 
+## GET /api/{module}/{recordId}/files
+
+Lists all files attached to a specific record.
+
+**Headers:**
+`x-api-key: YOUR_API_KEY`
+
+**Path Parameters:**
+- `module` (string, required): Module name (e.g., "customer", "order")
+- `recordId` (string, required): Record ID (MongoDB ObjectId)
+
+**Response (200 OK):**
+```json
+{
+  "data": [
+    {
+      "id": "507f1f77bcf86cd799439011",
+      "fileName": "contract.pdf",
+      "fileSize": 204800,
+      "mimeType": "application/pdf",
+      "fileExtension": "pdf",
+      "createdTime": "2025-01-15T10:00:00.000Z"
+    },
+    {
+      "id": "507f1f77bcf86cd799439012",
+      "fileName": "photo.jpg",
+      "fileSize": 1048576,
+      "mimeType": "image/jpeg",
+      "fileExtension": "jpg",
+      "createdTime": "2025-01-16T14:30:00.000Z"
+    }
+  ],
+  "meta": { "deprecation": null }
+}
+```
+
+**Error Responses:**
+- **400 Bad Request**: Invalid ObjectId format
+- **404 Not Found**: Record not found
+- **401 Unauthorized**: Missing or invalid API key
+
+**Example (curl):**
+```bash
+curl -X GET "https://srv.inflowcrm.pl/api/customer/507f1f77bcf86cd799439011/files" \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+---
+
+## GET /api/files/{fileId}/download
+
+Downloads a file by its ID as a binary stream.
+
+**Headers:**
+`x-api-key: YOUR_API_KEY`
+
+**Path Parameters:**
+- `fileId` (string, required): File ID (MongoDB ObjectId)
+
+**Response (200 OK):** Binary file stream
+
+**Response Headers:**
+```
+Content-Type: application/pdf
+Content-Disposition: attachment; filename*=UTF-8''contract.pdf
+Content-Length: 204800
+X-Content-Type-Options: nosniff
+Cache-Control: no-cache, no-store, must-revalidate
+```
+
+**Error Responses:**
+- **400 Bad Request**: Invalid ObjectId format
+- **404 Not Found**: File not found or access denied
+- **401 Unauthorized**: Missing or invalid API key
+
+> **Note:** Returns 404 (not 403) when the file exists but the user has no access — this prevents information leakage about file existence.
+
+**Example (curl):**
+```bash
+curl -X GET "https://srv.inflowcrm.pl/api/files/507f1f77bcf86cd799439011/download" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -o downloaded_file.pdf
+```
+
+---
+
+## POST /api/make/getModuleFields
+
+Returns field metadata for a module in [Make.com](https://www.make.com/) compatible format. This endpoint is used by the Make.com integration for dynamic field discovery.
+
+**Headers:**
+`x-api-key: YOUR_API_KEY`
+`Content-Type: application/json`
+
+**Body:**
+```json
+{
+  "module": "customer",
+  "requestType": "createRecord"
+}
+```
+
+**Parameters:**
+- `module` (string, required): Module name
+- `requestType` (string, required): Operation context — affects `required` flags. Typically `"createRecord"` or `"updateRecord"`
+
+**Response (200 OK):**
+```json
+{
+  "data": [
+    {
+      "name": "companyName",
+      "label": "Nazwa firmy",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "owner",
+      "label": "Właściciel",
+      "type": "select",
+      "required": false,
+      "options": [
+        { "value": "507f1f77bcf86cd799439011", "label": "jan@example.com" },
+        { "value": "507f1f77bcf86cd799439012", "label": "anna@example.com" }
+      ]
+    },
+    {
+      "name": "isActive",
+      "label": "Aktywny",
+      "type": "boolean",
+      "required": false
+    }
+  ]
+}
+```
+
+**Type mapping:**
+| CRM Field Type | Make.com Type |
+|---------------|---------------|
+| String, Phone, Email | `text` |
+| Number | `number` |
+| Date | `date` |
+| CheckBox | `boolean` |
+| Relation (single) | `select` |
+| PickList | `select` (with options) |
+
+> **Note:** MultiRelation fields are excluded from the response. User relation fields populate `options` with user ID/email pairs. Fields are marked `required: true` only for `createRecord` operations.
+
+> **Note:** This endpoint returns a flat `data` array without the standard `meta` wrapper used by other endpoints.
+
+**Error Responses:**
+- **400 Bad Request**: Missing module parameter
+- **401 Unauthorized**: Missing or invalid API key
+
+**Example (curl):**
+```bash
+curl -X POST "https://srv.inflowcrm.pl/api/make/getModuleFields" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "module": "customer", "requestType": "createRecord" }'
+```
+
+---
+
 ## Module-Specific Notes
 
 - Only modules available in your bundle can be accessed.
 - **Only fields with an 'Api field name' set in the InflowCRM UI can be used in the API.**
-- Field requirements and types vary by module. See [modules.md](./modules.md) for details.
+- Field requirements and types vary by module. See [modules.md](docs/rest-api/modules.md) for details.
 - File uploads are only supported on modules with file-type fields.
 
-> For more details on file uploads, see [file-uploads.md](./file-uploads.md).
+> For more details on file uploads, see [file-uploads.md](docs/rest-api/file-uploads.md).
 
 ---
