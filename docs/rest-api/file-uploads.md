@@ -47,13 +47,56 @@ fetch('https://srv.inflowcrm.pl/api/createRecord', {
 
 ---
 
+## 📎 Standalone Attachments
+
+If you need to attach files to a record **without** binding them to a specific custom field, use the reserved multipart key `standaloneAttachments`. Files uploaded under this key are persisted directly into the record's `files[]` array and are flagged as standalone (`isStandaloneFile: true`).
+
+- The key `standaloneAttachments` is **reserved** and is treated as standalone regardless of any module schema. The verbose name is intentional — it avoids collisions with common user-defined `apiFieldName` values like `attachments` or `files`.
+- You may repeat the `standaloneAttachments` key in a single request to upload **multiple files at once**.
+- Standalone uploads can be **mixed** with named file-field uploads in the same request.
+- On `PATCH /api/updateRecord/{id}`, newly uploaded files are **appended** to the record's existing `files[]` — they do not replace prior attachments.
+
+**Standalone-only example (curl):**
+```bash
+curl -X POST "https://srv.inflowcrm.pl/api/createRecord" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -F "module=customer" \
+  -F "name=Acme Corp" \
+  -F "standaloneAttachments=@/path/to/contract.pdf" \
+  -F "standaloneAttachments=@/path/to/invoice.pdf" \
+  -F "standaloneAttachments=@/path/to/notes.docx"
+```
+
+**Mixed example (named field + standalone, curl):**
+```bash
+curl -X POST "https://srv.inflowcrm.pl/api/createRecord" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -F "module=customer" \
+  -F "name=Acme Corp" \
+  -F "profilePicture=@/path/to/avatar.jpg" \
+  -F "standaloneAttachments=@/path/to/contract.pdf" \
+  -F "standaloneAttachments=@/path/to/invoice.pdf"
+```
+
+**Update example (curl, appends to existing files):**
+```bash
+curl -X PATCH "https://srv.inflowcrm.pl/api/updateRecord/$RECORD_ID" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -F "module=customer" \
+  -F "standaloneAttachments=@/path/to/extra.pdf"
+```
+
+> **Note:** the reserved key wins over any custom field definition — if a module happens to define a custom file field with `apiFieldName='standaloneAttachments'`, uploads under that key go to the standalone bucket and are not assigned to that field. Avoid using `standaloneAttachments` as an `apiFieldName` for custom fields.
+
+---
+
 ## ✅ File Field Validation
 
-- Only fields defined as file-type in the module schema are accepted.
-- Each file field must match the API field name.
-- Duplicate file keys are rejected.
+- Files sent under a non-reserved key must match an existing API field name of type `File` in the module schema.
+- Files sent under the reserved key `standaloneAttachments` are accepted regardless of the module schema and are stored as standalone attachments.
+- Duplicate keys are rejected for named file fields (one file per field). The reserved key `standaloneAttachments` may be repeated to upload multiple standalone files in a single request.
 - File size: **max 15MB per file**
-- Max files: **10 per request**
+- Max files: **10 per request** (named + standalone combined)
 - Invalid or extra fields will cause a validation error.
 
 ---
