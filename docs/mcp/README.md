@@ -136,14 +136,14 @@ curl -s https://srv.inflowcrm.pl/mcp \
 
 Tool results come back as JSON text in `result.content[0].text`; failures set `result.isError: true`.
 
-> **claude.ai / Claude Desktop "custom connectors"** require OAuth, which the InflowCRM MCP server does not offer
-> yet — they cannot send a static API key. Use Claude Code or a client that supports custom headers.
+> **claude.ai / Claude Desktop "custom connectors"** support OAuth or no authentication, but not a static API key
+> header, and the InflowCRM MCP server does not offer OAuth yet. Use Claude Code or a client that supports custom headers.
 
 ---
 
 ## 🧰 What the assistant can do
 
-22 tools, grouped by capability (full reference: **[MCP Tools](tools.md)**):
+Up to 22 tools (depending on your plan), grouped by capability (full reference: **[MCP Tools](tools.md)**):
 
 | Capability | Tools |
 |---|---|
@@ -159,7 +159,7 @@ Tool results come back as JSON text in `result.content[0].text`; failures set `r
 Exposed modules: `customer`, `contact`, `task`, `note`, `order`, `potential`, `event`, `enlist`, `coach`, `room` —
 limited to the modules of your company's plan. `list_modules` returns them with the names your company configured.
 
-As in the REST API, **only fields with an Api field name** are visible to MCP. Give a field an Api field name in
+As in the REST API, **only fields with an Api field name** can be read, filtered and written over MCP. Give a field an Api field name in
 the field settings to make it readable and writable by the assistant.
 
 ---
@@ -200,12 +200,13 @@ Built-in safeguards regardless of scopes:
 - **Tenant isolation** — every read and write is limited to your company; ids of other companies' records, files,
   users, pipelines or templates behave as "not found".
 - **Record permissions** — the same visibility rules as the CRM and the REST API.
-- **Strict input** — unknown arguments and unknown field names are rejected with the list of valid ones, values are
+- **Strict input** — unknown arguments are rejected; unknown field, filter and sort names are rejected with the list of
+  valid ones; values are
   validated against the field type (pick list, number, date, e-mail, rating, length, required).
 - **Soft delete** — `delete_record` moves the record to the CRM trash.
 - **No user editing** — there is no tool that changes users, roles or API keys.
-- **Audit log** — every tool call is logged (tool name, argument *names*, affected record ids, result). Argument
-  values are never logged.
+- **Audit log** — every tool call that passes input validation is logged with the tool name, argument *names*,
+  affected record ids, result, IP address and user agent. Argument values are not stored in the audit log.
 
 ### Prompt injection
 
@@ -222,7 +223,7 @@ human confirmation on for `delete_record` and the bulk tools in your client.
 | Requests | **300 per 5 minutes** per API key | every MCP HTTP request, including `initialize` and `tools/list` |
 | Bulk writes | **10 calls per 5 minutes** (≤ 500 records) | `create_records` + `update_records` together |
 | Document generation | **20 calls per 5 minutes** | `generate_document` |
-| Failed authentication | 300 per 5 minutes per IP | `401` responses |
+| Failed authentication | 300 per 5 minutes per IP | counts `401` responses; once exceeded, every request from that IP gets `429` until the window resets |
 
 The request limit returns HTTP `429`; the per-tool limits return a tool error such as
 `Too many bulk record writes, retry in 42 s.` A bulk call refused by the limit writes nothing.

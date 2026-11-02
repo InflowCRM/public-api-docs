@@ -1,13 +1,14 @@
 # MCP Tools Reference
 
-All 22 tools of the InflowCRM MCP server. See [MCP Server](README.md) for connecting, authentication and limits.
+All tools of the InflowCRM MCP server (up to 22 — pipeline tools appear only when your plan includes potentials or orders). See [MCP Server](README.md) for connecting, authentication and limits.
 
 **Conventions**
 
 - `module` is a system module name returned by `list_modules` (e.g. `customer`, `potential`).
-- Field keys are **Api field names** from `get_module_fields`. Fields without an Api field name are not visible.
+- Field keys are **Api field names** from `get_module_fields`. Fields without an Api field name are listed there
+  without one and cannot be read, filtered or written.
 - Ids are 24-character hex strings (`recordId`, `userId`, `fileId`, `templateId`, pipeline `process`).
-- Unknown top-level arguments are rejected. Every record in an answer has an `id`.
+- Unknown top-level arguments are rejected (input validation error). Every record in an answer has an `id`.
 - Read-only tools are marked with the MCP `readOnlyHint`; `delete_record` carries `destructiveHint`.
 
 ---
@@ -80,8 +81,10 @@ Several records of one module (max 50 ids), paginated. Ids that do not exist are
 { "status": "Aktywny", "city": "Kraków" }
 ```
 
-- A **date-only** value (`"2026-05-10"`) on a Date/Datetime field matches the whole day; a value with a time matches exactly.
-- A **DateRange** field takes `[from, to]` (either bound may be empty): `{ "eventDate": ["2026-05-10", "2026-05-20"] }`.
+- A **date-only** value (`"2026-05-10"`) on a Date/Datetime field matches the whole day (server time zone); a value with a time matches exactly.
+- A **DateRange** field takes `[from, to]` and matches records whose range **starts** between `from` and `to`:
+  `{ "eventDate": ["2026-05-10", "2026-05-20"] }`. Leave `from` empty (`["", "2026-05-20"]`) for "starts up to";
+  with only `from` it matches records starting on that day.
 - `false` on a checkbox matches every record that is not `true` (including empty).
 - Number/Rating fields accept numbers or numeric strings; `null` / `""` match "no value".
 - To match one of several values use `advancedFilter` with `in`.
@@ -104,16 +107,20 @@ Several records of one module (max 50 ids), paginated. Ids that do not exist are
 | `equal`, `notEqual`, `greater`, `greaterOrEqual`, `lower`, `lowerOrEqual` | single value |
 | `in`, `notIn` | array |
 | `isEmpty`, `isNotEmpty` | none (`value: false` inverts) |
-| `contains` | text, ≤ 200 characters; case-insensitive substring, text fields only |
+| `contains` | text, ≤ 200 characters; case-insensitive substring on text, e-mail, phone, NIP, link and pick list fields |
 
 `advancedFilter` also accepts the system fields `id`, `createdTime`, `modifiedTime`, `createdBy`, `modifiedBy`,
 `owner`, `recordNumber`. Unknown field names are rejected with the list of valid ones.
+
+> Range conditions (`greater`, `lower`, …) on dates are supported for `createdTime` and `modifiedTime`. For your own
+> Date fields use `filters` (a whole day) or a DateRange field.
 
 **Rules**
 
 - `filters` and `advancedFilter` cannot be combined.
 - `query` cannot be combined with `filters`; it can be combined with an `advancedFilter` using `AND`.
-- `query` scans at most 500 matching candidates. `truncated: true` means the cap was hit and totals may be
+- `query` scans at most 500 matching candidates (it may also match text fields that have no Api field name).
+  `truncated: true` means the cap was hit and totals may be
   capped — type a longer fragment; extra filter conditions do not shrink the scan.
 - **Sort** keys: Api field names or `createdTime`, `modifiedTime`, `recordNumber`, `owner`, `createdBy`,
   `modifiedBy`. Default `{ "createdTime": -1 }`.
@@ -128,7 +135,8 @@ Creates a record and returns it with its new `id`. Required fields must be set.
 - **Input:** `{ module, data, files? }`
 
 ### `update_record`
-Updates only the fields listed in `data`; other fields stay unchanged. Files are appended to existing ones.
+Updates only the fields listed in `data`; other fields stay unchanged. Files sent as `standaloneAttachments` are
+appended to the record's files; a file sent for a File field replaces that field's value.
 
 - **Input:** `{ module, recordId, data, files? }` — at least one field or one file.
 
@@ -148,14 +156,18 @@ Moves a record to the CRM trash. → `{ id, deleted: true }`
 ### `data` — field values
 
 - Keys are Api field names; values are validated against the field type:
-  - pick list / radio / multi pick list values must be one of `pickListValues` (unless the field allows new items),
-  - numbers, dates (field date format or ISO `2026-05-10`), checkboxes (`true`/`false`),
-  - e-mail format, rating between 0 and the field's maximum, text length.
-- Unknown keys are rejected with the list of valid fields. System fields copied from a fetched record (`id`,
-  `createdTime`, `owner`, …) are ignored, so a record can be read, changed and sent back.
+  - pick list / radio / multi pick list values must be one of `pickListValues` (unless the field is configured to
+    accept new items),
+  - numbers, dates (the field's date format or ISO `2026-05-10`), checkboxes (`true`/`false`),
+  - e-mail format, rating between 0 and the field's maximum (5 unless configured), text length (`length`).
+- Unknown keys are rejected with the list of valid fields. Read-only system fields copied from a fetched record
+  (`id`, `createdTime`, `modifiedTime`, `createdBy`, `modifiedBy`, `recordNumber`) are ignored, so a record can be read,
+  changed and sent back — unless it was read with `expandRelations` (send relations back as ids) or holds old values
+  that no longer pass validation.
 - **Relations** take a record id (multi-relations an array of ids); `null` or `""` clears the relation. Ids of
-  records that do not exist in your company are rejected. `owner` defaults to the integration user — set it to a
-  user id from `list_users` to assign someone else.
+  records that do not exist in your company are rejected.
+- **Owner:** a new record belongs to the integration user. To assign someone else, send a user id from `list_users`
+  in the field whose `relationField` is `owner` (see `get_module_fields` for its Api field name).
 - **Pipelines** (`potential`, `order`): set the pipeline id (from `get_pipelines`) and the **stage name** together.
   The stage is matched by name (`"1"` means a stage called "1", not the first stage). Without a stage the record
   lands in the first stage. Setting the pipeline field to `null` detaches the record and removes its card from the
@@ -191,6 +203,8 @@ Record count per stage and the sum of the value per currency — a funnel report
 
 - **Input:** `{ module, process? }` (`process` = pipeline id; default: all pipelines of the module)
 - **Output:** `{ module, pipelines: [{ id, name, count, totals: [{ currency, value }], stages: [{ name, count, totals }] }] }`
+- `totals` stay empty when the module has no value/currency fields; records with a value but no currency are summed
+  under `currency: null`.
 
 ---
 

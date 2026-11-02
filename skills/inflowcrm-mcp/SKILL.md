@@ -17,7 +17,7 @@ https://inflowcrm.github.io/public-api-docs/#/docs/mcp/README for setup.
 1. `list_modules` — which modules exist and what this company calls them. Users speak in the company's names
    ("Szanse", "Zlecenia", "Kursanci"); tools need `systemModuleName` (`potential`, `order`, `enlist`…).
 2. `get_module_fields` for every module you will filter, sort or write. Use **only** the returned `apiFieldName`
-   values as keys — never labels, never guesses. Fields without an Api field name do not exist for you; if the user
+   values as keys — never labels, never guesses. Fields listed without an Api field name cannot be used; if the user
    needs one, tell them to set its *Api field name* in the CRM field settings.
 3. Unsure about value formats? `get_sample_record` shows a real record.
 
@@ -30,11 +30,13 @@ Cache this per conversation — module fields rarely change mid-task.
 - **Exact criteria** → `filters` (equality, one value per field) or `advancedFilter` (`in`, ranges, `contains`,
   `isEmpty`, `OR`). Never send `filters` and `advancedFilter` together, and never `query` with `filters` — move
   the conditions into `advancedFilter` (operator `AND`).
-- `truncated: true` in a `query` answer = more than 500 candidates matched; ask for or use a longer fragment.
+- `truncated: true` in a `query` answer = 500 or more candidates matched; ask for or use a longer fragment.
   Counts in such an answer are lower bounds.
 - **"How many…"** → `count_records`. **Funnel / pipeline value** → `get_pipeline_summary` (one call, no paging).
 - **Dates:** a date-only value (`2026-05-10`) in `filters` matches that whole day. A DateRange field takes
-  `[from, to]`. For "created this month" use `advancedFilter` on `createdTime` with ISO timestamps.
+  `[from, to]` and matches ranges that *start* in that window (only `from` = starts on that day; `["", to]` = starts
+  up to `to`). For "created this month" use `advancedFilter` on `createdTime` with ISO timestamps; range
+  conditions on custom Date fields are not reliable — use `filters` for those.
 - Results are newest first by default; pages hold max 50 (default 20). Read `pagination.total` before claiming
   "all" — page further or count instead of extrapolating.
 - Set `expandRelations: true` when you will show related records or owners to the user — you get
@@ -47,11 +49,14 @@ Cache this per conversation — module fields rarely change mid-task.
 - Before `create_record`, check for duplicates (`find_record` / `search_records` on e-mail, NIP or name) unless
   the user said to create anyway.
 - New Polish company from a NIP → `lookup_company_gus` first, then map name/address into the customer fields.
-- `update_record` changes only the keys you send. Sending back a record you fetched is fine — system fields
-  (`id`, `createdTime`, `owner`…) are ignored.
+- `update_record` changes only the keys you send. Sending back a record you fetched is fine — read-only system
+  fields (`id`, `createdTime`, `recordNumber`…) are ignored — but not one read with `expandRelations`: send
+  relations as ids.
 - **Pick lists:** send one of `pickListValues` exactly as listed.
-- **Relations:** send record ids (`"owner"`: user id from `list_users`; customer/contact relations: ids from
-  search). `null` clears. Unknown or foreign ids are rejected.
+- **Relations:** send record ids (customer/contact relations: ids from search). `null` clears. Unknown or foreign
+  ids are rejected.
+- **Owner:** new records belong to the integration user. To assign a person, put a user id from `list_users` in the
+  field whose `relationField` is `owner` (its apiFieldName comes from `get_module_fields`).
 - **Pipelines (potential, order):** get ids and stage names from `get_pipelines`. Send the pipeline id **and the
   stage name** together; a stage is matched by name, never by position. Moving to another pipeline without a stage
   puts the record in the first stage.
