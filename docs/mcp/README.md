@@ -56,7 +56,7 @@ apiKey: YOUR_API_KEY
 
 | Response | Meaning |
 |---|---|
-| `401 {"error":"Unauthorized"}` | Missing or unknown key, or the integration user is blocked/deleted |
+| `401 {"error":"Unauthorized"}` | Missing or unknown key, the integration user is blocked/deleted, or the company account is inactive |
 | `404 Not Found` | The key is valid but MCP is not enabled for the company |
 | `403` (JSON-RPC `Forbidden origin`) | The request carries a browser `Origin` header that is not allow-listed — call MCP from a server-side client |
 | `429` (JSON-RPC `Rate limit exceeded`) | Too many requests — see *Rate limits* below |

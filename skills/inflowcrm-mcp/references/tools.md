@@ -22,8 +22,8 @@ Lists the modules available to the API key with the singular/plural names config
 - **Output:** `[{ moduleName, singular, plural, systemModuleName }]` — pass `systemModuleName` as `module`.
 
 ### `get_module_fields`
-Fields of a module: `apiFieldName`, `label`, `type`, `required`, `pickListValues`, `relatedModule`, `length`,
-`decimal`, `defaultValue`, `description`. Call it before searching, filtering, creating or updating.
+Fields of a module: `apiFieldName`, `label`, `type`, `required`, `pickListValues`, `relatedModule`, `relationField`,
+`relationFieldName`, `length`, `decimal`, `defaultValue`, `description`. Call it before searching, filtering, creating or updating.
 
 - **Input:** `{ module }`
 
@@ -86,7 +86,8 @@ Several records of one module (max 50 ids), paginated. Ids that do not exist are
   `{ "eventDate": ["2026-05-10", "2026-05-20"] }`. Leave `from` empty (`["", "2026-05-20"]`) for "starts up to";
   with only `from` it matches records starting on that day.
 - `false` on a checkbox matches every record that is not `true` (including empty).
-- Number/Rating fields accept numbers or numeric strings; `null` / `""` match "no value".
+- Number/Rating fields accept numbers or numeric strings; `null` matches records with no value, `""` matches values
+  stored as an empty string.
 - To match one of several values use `advancedFilter` with `in`.
 
 **`advancedFilter`** — conditions joined with `AND` (default) or `OR`:
@@ -169,8 +170,8 @@ Moves a record to the CRM trash. → `{ id, deleted: true }`
 - **Owner:** a new record belongs to the integration user. To assign someone else, send a user id from `list_users`
   in the field whose `relationField` is `owner` (see `get_module_fields` for its Api field name).
 - **Pipelines** (`potential`, `order`): set the pipeline id (from `get_pipelines`) and the **stage name** together.
-  The stage is matched by name (`"1"` means a stage called "1", not the first stage). Without a stage the record
-  lands in the first stage. Setting the pipeline field to `null` detaches the record and removes its card from the
+  The stage is matched by name (`"1"` means a stage called "1", not the first stage). On create, or when moving a
+  record to another pipeline, a missing stage means the first stage; an update that keeps the pipeline keeps its stage. Setting the pipeline field to `null` detaches the record and removes its card from the
   board (when the field is not required). Check `get_module_fields` for the Api field names of the pipeline and
   stage fields in your company.
 
