@@ -7,7 +7,8 @@ ask before changing data. With the skill the assistant needs fewer calls and mak
 Source: [`skills/inflowcrm-mcp`](https://github.com/InflowCRM/public-api-docs/tree/main/skills/inflowcrm-mcp)
 — `SKILL.md` plus a full tool reference in `references/tools.md`.
 
-> The skill does not connect anything by itself. Connect the [MCP server](README.md) first.
+> The skill does not connect anything by itself. Connect the [MCP server](README.md) first — or paste the
+> [universal setup prompt](clients.md#universal-setup-prompt) into your agent to do both in one go.
 
 ---
 
@@ -51,6 +52,18 @@ cp -r /tmp/inflowcrm-docs/skills/inflowcrm-mcp ~/.claude/skills/
 ```
 
 Use `.claude/skills/` inside a project instead of `~/.claude/skills/` to share it with your team via git.
+
+### Copy and paste
+
+Prefer not to install anything? Copy the skill below (the copy button is in the top-right corner of the block):
+
+- **Claude Code:** save it as `~/.claude/skills/inflowcrm-mcp/SKILL.md` (or `.claude/skills/inflowcrm-mcp/SKILL.md` in a project).
+- **Any other assistant:** paste it into the project instructions or system prompt.
+
+The tool-by-tool details live in [`references/tools.md`](https://github.com/InflowCRM/public-api-docs/blob/main/skills/inflowcrm-mcp/references/tools.md)
+— the skill works without it, the [MCP Tools](tools.md) page has the same content.
+
+[SKILL.md](../../skills/inflowcrm-mcp/SKILL.md ':include :type=code markdown')
 
 ### Other agents
 
