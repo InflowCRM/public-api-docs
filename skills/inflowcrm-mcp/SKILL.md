@@ -56,7 +56,8 @@ Cache this per conversation — module fields rarely change mid-task.
   stage name** together; a stage is matched by name, never by position. Moving to another pipeline without a stage
   puts the record in the first stage.
 - **Files:** `files: [{ key, name, mimeType, contentBase64 }]` on `create_record` / `update_record` only; `key` is a
-  File field's apiFieldName or `standaloneAttachments`; ≤ 5 MB each, ≤ 10 per call.
+  File field's apiFieldName or `standaloneAttachments`. The whole request is capped at 7 MB, so send about
+  5 MB of files per call at most; split larger sets into several `update_record` calls.
 - Validation errors list the valid fields / values — fix the payload from the message and retry once; do not loop.
 
 ## 4. Bulk and destructive actions — confirm first

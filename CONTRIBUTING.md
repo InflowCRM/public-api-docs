@@ -18,3 +18,7 @@ Before submitting a pull request, you can validate your changes locally by runni
 npm install -g @stoplight/spectral-cli
 spectral lint docs/rest-api/openapi.yaml
 ```
+## MCP docs and agent skill
+
+- `skills/inflowcrm-mcp/references/tools.md` mirrors `docs/mcp/tools.md` — change both together.
+- When the skill changes, bump `version` in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`, otherwise installed plugins keep the cached copy.

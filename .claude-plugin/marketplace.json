@@ -10,7 +10,7 @@
       "name": "inflowcrm",
       "source": "./",
       "description": "Agent skill for the InflowCRM MCP server: call order, filters, pipelines, files, documents and safe bulk changes.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": {
         "name": "InflowCRM",
         "url": "https://inflowcrm.pl"

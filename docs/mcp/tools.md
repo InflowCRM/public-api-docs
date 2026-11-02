@@ -173,7 +173,8 @@ Moves a record to the CRM trash. → `{ id, deleted: true }`
 ```
 
 - `key`: Api field name of a File field, or `standaloneAttachments` to attach the file to the record itself.
-- Up to 10 files per call, each ≤ 5 MB decoded; standard or URL-safe base64.
+- Up to 10 files per call, each ≤ 5 MB decoded; standard or URL-safe base64. The whole request is limited to
+  7 MB, so one call carries about 5 MB of files in total — send larger sets in separate `update_record` calls.
 - Same extension / MIME / content checks as the REST API; mismatched or blocked types are rejected.
 
 ---

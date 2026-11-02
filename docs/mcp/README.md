@@ -234,7 +234,7 @@ The request limit returns HTTP `429`; the per-tool limits return a tool error su
 | Records per page | 50 (default 20) |
 | Ids per `get_records_by_ids` | 50 |
 | Items per bulk call | 50 |
-| Files per write | 10, each ≤ 5 MB decoded |
+| Files per write | 10, each ≤ 5 MB decoded; whole request ≤ 7 MB (≈ 5 MB of files in total) |
 | `download_file` / `generate_document` | ≤ 5 MB per file |
 | Filter conditions | 20 per `advancedFilter` |
 | Sort keys | 3 |
