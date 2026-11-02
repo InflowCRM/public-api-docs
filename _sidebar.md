@@ -24,6 +24,7 @@
 **AI & MCP**
 
 - [🤖 MCP Server](docs/mcp/README.md)
+- [🔌 Connect your AI tool](docs/mcp/clients.md)
 - [🧰 MCP Tools](docs/mcp/tools.md)
 - [🧠 Agent Skill](docs/mcp/skill.md)
 
