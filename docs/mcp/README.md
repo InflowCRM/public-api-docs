@@ -81,39 +81,10 @@ Add `--scope user` to make the server available in every project.
 
 > Claude Code reads the tool list when it connects. After InflowCRM adds tools, run `/mcp` and reconnect.
 
-### Cursor (config example)
+### Claude Desktop, Codex, Gemini CLI, Cursor, VS Code, Windsurf, n8n, Python, OpenAI Agents SDK, LangChain
 
-`~/.cursor/mcp.json` or `.cursor/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "inflowcrm": {
-      "url": "https://mcp.inflowcrm.pl",
-      "headers": { "Authorization": "Bearer YOUR_API_KEY" }
-    }
-  }
-}
-```
-
-### VS Code (config example)
-
-`.vscode/mcp.json`:
-
-```json
-{
-  "inputs": [
-    { "type": "promptString", "id": "inflowcrm-key", "description": "InflowCRM API key", "password": true }
-  ],
-  "servers": {
-    "inflowcrm": {
-      "type": "http",
-      "url": "https://mcp.inflowcrm.pl",
-      "headers": { "Authorization": "Bearer ${input:inflowcrm-key}" }
-    }
-  }
-}
-```
+Step-by-step configs for each tool — plus a **universal setup prompt** that lets any AI agent configure the
+connection and install the skill by itself — are on **[Connect your AI tool](clients.md)**.
 
 ### Your own agent / any MCP SDK
 
@@ -139,7 +110,8 @@ curl -s https://mcp.inflowcrm.pl \
 Tool results come back as JSON text in `result.content[0].text`; failures set `result.isError: true`.
 
 > **claude.ai / Claude Desktop "custom connectors"** support OAuth or no authentication, but not a static API key
-> header, and the InflowCRM MCP server does not offer OAuth yet. Use Claude Code or a client that supports custom headers.
+> header, and the InflowCRM MCP server does not offer OAuth yet. In Claude Desktop use the local configuration
+> described in [Connect your AI tool](clients.md#claude-desktop).
 
 ---
 
@@ -267,6 +239,7 @@ item failed.
 
 ## 📚 See also
 
+- [Connect your AI tool](clients.md)
 - [MCP Tools reference](tools.md)
 - [Agent skill for InflowCRM](skill.md)
 - [REST API — Modules & Fields](../rest-api/modules.md)
