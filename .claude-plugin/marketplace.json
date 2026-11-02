@@ -1,0 +1,22 @@
+{
+  "name": "inflowcrm",
+  "description": "Official InflowCRM plugins for Claude Code",
+  "owner": {
+    "name": "InflowCRM",
+    "url": "https://inflowcrm.pl"
+  },
+  "plugins": [
+    {
+      "name": "inflowcrm",
+      "source": "./",
+      "description": "Agent skill for the InflowCRM MCP server: call order, filters, pipelines, files, documents and safe bulk changes.",
+      "version": "1.0.2",
+      "author": {
+        "name": "InflowCRM",
+        "url": "https://inflowcrm.pl"
+      },
+      "category": "productivity",
+      "keywords": ["inflowcrm", "crm", "mcp", "skills"]
+    }
+  ]
+}

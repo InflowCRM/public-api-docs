@@ -21,6 +21,12 @@
 - [🧰 Best Practices](docs/graphql/best-practices.md)
 - [❌ Error Handling](docs/graphql/errors.md)
 
+**AI & MCP**
+
+- [🤖 MCP Server](docs/mcp/README.md)
+- [🧰 MCP Tools](docs/mcp/tools.md)
+- [🧠 Agent Skill](docs/mcp/skill.md)
+
 **Integrations**
 - [🔗 n8n Community Node](docs/n8n-node.md)
 
