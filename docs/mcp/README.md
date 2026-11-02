@@ -26,8 +26,10 @@ modules and fields (by **Api field name**), the same tenant isolation and record
 ## 🌐 Endpoint
 
 ```
-https://mcp.inflowcrm.pl/mcp
+https://mcp.inflowcrm.pl
 ```
+
+`https://mcp.inflowcrm.pl/mcp` is accepted as well.
 
 | Property | Value |
 |---|---|
@@ -70,7 +72,7 @@ apiKey: YOUR_API_KEY
 ### Claude Code
 
 ```bash
-claude mcp add --transport http inflowcrm https://mcp.inflowcrm.pl/mcp \
+claude mcp add --transport http inflowcrm https://mcp.inflowcrm.pl \
   --header "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -87,7 +89,7 @@ Add `--scope user` to make the server available in every project.
 {
   "mcpServers": {
     "inflowcrm": {
-      "url": "https://mcp.inflowcrm.pl/mcp",
+      "url": "https://mcp.inflowcrm.pl",
       "headers": { "Authorization": "Bearer YOUR_API_KEY" }
     }
   }
@@ -106,7 +108,7 @@ Add `--scope user` to make the server available in every project.
   "servers": {
     "inflowcrm": {
       "type": "http",
-      "url": "https://mcp.inflowcrm.pl/mcp",
+      "url": "https://mcp.inflowcrm.pl",
       "headers": { "Authorization": "Bearer ${input:inflowcrm-key}" }
     }
   }
@@ -119,7 +121,7 @@ Any client that supports **Streamable HTTP** with custom headers works. Because 
 request can be sent on its own:
 
 ```bash
-curl -s https://mcp.inflowcrm.pl/mcp \
+curl -s https://mcp.inflowcrm.pl \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
@@ -127,7 +129,7 @@ curl -s https://mcp.inflowcrm.pl/mcp \
 ```
 
 ```bash
-curl -s https://mcp.inflowcrm.pl/mcp \
+curl -s https://mcp.inflowcrm.pl \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
