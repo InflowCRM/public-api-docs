@@ -1,0 +1,12 @@
+{
+  "name": "inflowcrm",
+  "description": "Agent skill for working with InflowCRM data through the InflowCRM MCP server.",
+  "version": "1.0.0",
+  "author": {
+    "name": "InflowCRM",
+    "url": "https://inflowcrm.pl"
+  },
+  "homepage": "https://inflowcrm.github.io/public-api-docs/#/docs/mcp/skill",
+  "repository": "https://github.com/InflowCRM/public-api-docs",
+  "keywords": ["inflowcrm", "crm", "mcp", "skills"]
+}
