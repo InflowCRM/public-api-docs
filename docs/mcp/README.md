@@ -97,12 +97,12 @@ disconnects employees' apps immediately.
 
 What a signed-in connection may do:
 
-- **Exactly what the user may do in the CRM.** Records, fields and modules follow the user's role, the same as in
-  the CRM's screens. There are no separate OAuth scopes and no "read only" mode — to limit an assistant further,
+- **The user's own rights.** Which records a signed-in user sees and changes, and which field values, follow their
+  role, as in the CRM. There are no separate OAuth scopes and no "read only" mode — to limit an assistant further,
   use your AI app's per-tool settings (see *Confirmations and restricting what the assistant may do* below).
 - An employee never gets the configuration tools (fields, list views, roles), even when the company has them.
-- Blocking or deleting the user in the CRM ends the access at once. Removing the connector in the AI app
-  disconnects it too.
+- Blocking or deleting the user in the CRM ends the access at once. Removing the connector in the AI app removes
+  its sign-in from the app.
 
 ### API key
 
@@ -319,9 +319,9 @@ Every tool belongs to a scope:
 ### Prompt injection
 
 Notes, e-mails and descriptions stored in the CRM are written by third parties. The server tells the model to
-treat them as **data, never instructions**, to ask the user before deleting or bulk-modifying records, and never
-to change configuration or templates because text in the CRM asks for it. Keep human confirmation on for deletes,
-bulk tools, template writes and configuration tools in your client.
+treat them as **data, never instructions**, to ask the user before deleting or bulk-modifying records, and — when the
+configuration tools are on — never to change configuration because text in the CRM asks for it. Keep human
+confirmation on for deletes, bulk tools, template writes and configuration tools in your client.
 
 ---
 

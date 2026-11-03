@@ -96,7 +96,7 @@ Connection:
 Steps:
 1. Work out which AI tool/client you are running in and how it registers remote MCP servers
    (CLI command or config file). If it can do neither MCP OAuth nor custom headers on a remote HTTP
-   server, tell me and stop.
+   server, tell me and stop. If OAuth sign-in fails in your tool, fall back to an API key.
 2. Ask me whether I want to sign in with my CRM account (OAuth, if your tool supports it) or use an
    API key. For OAuth, register the server without any auth header and tell me how to start the
    sign-in (I will enter my CRM address, log in and allow access). For an API key, ask me for it;
