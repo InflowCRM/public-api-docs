@@ -1,23 +1,78 @@
 # Connect your AI tool
 
-The InflowCRM MCP server works with any AI tool that supports **remote MCP servers over Streamable HTTP with a
-custom header**. Everything you need:
+The InflowCRM MCP server works with any AI tool that supports **remote MCP servers over Streamable HTTP**, either
+by **signing in with your CRM account (OAuth)** or with **an API key in a header**. Everything you need:
 
 | Setting | Value |
 |---|---|
 | URL | `https://mcp.inflowcrm.pl` |
 | Transport | Streamable HTTP (sometimes called "HTTP" or "streamable-http"; **not** SSE) |
+| Authentication | OAuth — sign in on your company's CRM page (no key needed), **or** |
 | Header | `Authorization: Bearer YOUR_API_KEY` (or `x-api-key: YOUR_API_KEY`) |
 
-Get the API key and enable MCP first — see [MCP Server → Quick start](README.md).
+MCP must be enabled for your company first; for the API key route you also need an integration user's key — see
+[MCP Server → Quick start](README.md). Signing in works for company administrators, and for employees only when
+your company has asked InflowCRM to allow them ([details](README.md#who-can-sign-in)).
 
 > Keep the key out of files you commit. Where a tool can read it from an environment variable, use
 > `INFLOWCRM_API_KEY`.
 
-**Jump to:** [Universal setup prompt](#universal-setup-prompt) · [Claude Code](#claude-code) ·
-[Claude Desktop](#claude-desktop) · [OpenAI Codex CLI](#openai-codex-cli) · [Gemini CLI](#gemini-cli) ·
+**Jump to:** [claude.ai and Claude Desktop](#claudeai-and-claude-desktop-connector) · [ChatGPT](#chatgpt) ·
+[Universal setup prompt](#universal-setup-prompt) · [Claude Code](#claude-code) ·
+[Claude Desktop with an API key](#claude-desktop-with-an-api-key) · [OpenAI Codex CLI](#openai-codex-cli) · [Gemini CLI](#gemini-cli) ·
 [Cursor](#cursor) · [VS Code](#vs-code-github-copilot) · [Windsurf](#windsurf) · [n8n](#n8n) ·
 [Python](#python-mcp-sdk) · [OpenAI Agents SDK](#openai-agents-sdk) · [LangChain / LangGraph](#langchain-langgraph)
+
+---
+
+## claude.ai and Claude Desktop (connector)
+
+claude.ai and the Claude Desktop app share the same **custom connectors**. Connecting signs you in with your CRM
+account — no API key.
+
+1. Open **Settings → Connectors** and choose **Add custom connector**. (In a Team / Enterprise organization an owner
+   may have to add the connector for the organization first.)
+2. Name it `InflowCRM` and enter the URL `https://mcp.inflowcrm.pl`. Leave the advanced OAuth fields empty — the app
+   registers itself.
+3. Click **Connect**. A page *"Połącz aplikację AI z InflowCRM"* asks for **your CRM address** — the one you log in
+   at, e.g. `firma.inflowstore.pl` — then **Dalej**.
+4. Log in to your CRM if asked. The consent screen shows the app, your account and your company — check them and
+   **allow** access.
+5. Back in Claude, enable the InflowCRM connector in a chat's tools menu and ask e.g. *"How many customers do we
+   have?"*.
+
+**Recommended:** in the connector's tool settings set the tools that create, change or delete data to **needs
+approval** (ask every time). This is the confirmation that cannot be bypassed by text inside CRM data. See
+[Confirmations](README.md#confirmations) for the tools that also require `confirm: true`.
+
+The assistant works with **your rights** in the CRM. When InflowCRM enables more tools for your company, disconnect
+and connect again (or start a new chat) to see them.
+
+Skill: if your plan lets you add skills (Settings → Capabilities), upload a ZIP of the
+[`skills/inflowcrm-mcp`](https://github.com/InflowCRM/public-api-docs/tree/main/skills/inflowcrm-mcp) folder;
+otherwise paste the [skill text](skill.md#copy-and-paste) into a Project's instructions.
+
+| Message | What to do |
+|---|---|
+| *Nie znaleziono CRM o tym adresie albo MCP nie jest w nim włączone.* | Check the CRM address; ask InflowCRM to enable MCP for your company |
+| *To konto nie może łączyć aplikacji AI z CRM. Skontaktuj się z administratorem firmy.* | Your account may not connect AI apps — ask your company administrator (employees need the feature enabled for the company) |
+| *Ten link wygasł. Wróć do aplikacji i połącz się jeszcze raz.* | The sign-in link is valid for 10 minutes — click Connect again |
+
+---
+
+## ChatGPT
+
+ChatGPT connects to remote MCP servers as **custom connectors (apps)** with OAuth. Availability depends on your
+ChatGPT plan, and in business workspaces an admin may have to allow custom connectors.
+
+1. Open **Settings → Apps & Connectors** (turn on **Developer mode** under *Advanced settings* if your plan requires
+   it) and create a new connector.
+2. Enter the MCP server URL `https://mcp.inflowcrm.pl` and choose **OAuth** as the authentication.
+3. Sign in exactly as in steps 3–4 for [claude.ai](#claudeai-and-claude-desktop-connector): your CRM address, log
+   in, allow.
+4. Use the connector in a chat. Keep ChatGPT's confirmation for write actions switched on.
+
+Skill: paste the [skill text](skill.md#copy-and-paste) into the project's or custom GPT's instructions.
 
 ---
 
@@ -32,16 +87,24 @@ Set up the InflowCRM MCP server and the InflowCRM agent skill for the tool you a
 Connection:
 - URL: https://mcp.inflowcrm.pl
 - Transport: Streamable HTTP (remote MCP server, not stdio, not SSE)
-- Auth header: Authorization: Bearer <API key>
+- Authentication, one of:
+  a) OAuth: the server supports MCP OAuth 2.1 (dynamic client registration, PKCE); I sign in on my
+     company's CRM page, no key needed;
+  b) API key header: Authorization: Bearer <API key>
 - Server name: inflowcrm
 
 Steps:
 1. Work out which AI tool/client you are running in and how it registers remote MCP servers
-   (CLI command or config file). If it cannot connect to a remote HTTP server with custom headers,
-   tell me and stop.
-2. Ask me for my InflowCRM API key. Prefer a reference to the environment variable INFLOWCRM_API_KEY
-   over writing the key into a file; never put the key into a file tracked by git, and never echo it back.
+   (CLI command or config file). If it can do neither MCP OAuth nor custom headers on a remote HTTP
+   server, tell me and stop.
+2. Ask me whether I want to sign in with my CRM account (OAuth, if your tool supports it) or use an
+   API key. For OAuth, register the server without any auth header and tell me how to start the
+   sign-in (I will enter my CRM address, log in and allow access). For an API key, ask me for it;
+   prefer a reference to the environment variable INFLOWCRM_API_KEY over writing the key into a file;
+   never put the key into a file tracked by git, and never echo it back.
 3. Register the server under the name "inflowcrm" at user/global level unless I ask for this project only.
+   If your tool can require approval per tool, set the InflowCRM tools that create, update or delete
+   data (records, templates, fields, list views, roles) to "ask every time".
 4. Install the agent skill:
    https://raw.githubusercontent.com/InflowCRM/public-api-docs/main/skills/inflowcrm-mcp/SKILL.md
    - If your tool supports Agent Skills, save it as inflowcrm-mcp/SKILL.md in your skills directory
@@ -63,16 +126,23 @@ claude mcp add --transport http --scope user inflowcrm https://mcp.inflowcrm.pl 
   --header "Authorization: Bearer YOUR_API_KEY"
 ```
 
+Or sign in with your CRM account instead of a key: add the server without `--header`, run `/mcp`, select
+`inflowcrm` and choose **Authenticate** — the browser opens the sign-in page.
+
+```bash
+claude mcp add --transport http --scope user inflowcrm https://mcp.inflowcrm.pl
+```
+
 Skill: `/plugin marketplace add InflowCRM/public-api-docs` then `/plugin install inflowcrm@inflowcrm`
 ([details](skill.md)). Check the connection with `/mcp`.
 
 ---
 
-## Claude Desktop
+## Claude Desktop with an API key
 
-Claude Desktop's **custom connectors** (Settings → Connectors) cannot send an API-key header. Use its local
-configuration with the [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) bridge instead (requires
-[Node.js](https://nodejs.org) 18+):
+The easiest way is the [connector with sign-in](#claudeai-and-claude-desktop-connector). Connectors cannot send an
+API-key header, so to connect Claude Desktop **with an integration user's API key** use its local configuration
+with the [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) bridge (requires [Node.js](https://nodejs.org) 18+):
 
 1. **Settings → Developer → Edit Config** opens `claude_desktop_config.json`.
 2. Add the server:
@@ -287,5 +357,4 @@ tools = await client.get_tools()   # pass to create_react_agent(...) or your own
 
 - **SSE-only clients** — the server speaks Streamable HTTP only.
 - **Browser-based clients** calling the server directly from a web page — browser `Origin` headers are rejected.
-- **Connectors that require OAuth** (e.g. claude.ai / ChatGPT custom connectors without header support) — the
-  server authenticates with an API key; OAuth is not available yet.
+- **Signing in as an integration user** — integration users connect with their API key only.
