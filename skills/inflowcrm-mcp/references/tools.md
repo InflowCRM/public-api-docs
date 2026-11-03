@@ -286,7 +286,7 @@ Templates insert record data with **tags** in single braces: `{CUSTOMER_NAME}`, 
 with `{{#each …}}…{{/each}}`.
 
 - A create or update with an unknown tag is refused:
-  `Unknown tag(s) in template: {X}. Valid tags: … Call get_template_tags for the full list.`
+  `Unknown tag(s) in <template|subject|header|footer>: {X}. Valid tags: … Call get_template_tags for the full list.`
   Tags already present in a stored template stay allowed on update.
 - `{{…}}` expressions must not contain HTML (`<` or `>`).
 
@@ -336,7 +336,7 @@ Tags a template of a module may contain. Call it before writing a template.
   `template`: HTML body, ≤ 5 MB.
 - Created with automatic sending off and no attachments.
 - **The HTML is sanitized when saved:** scripts, event handlers, iframes and other unsafe markup are removed, ordinary
-  formatting (paragraphs, lists, tables, links, images…) is kept. The answer contains the stored subject and body.
+  formatting (paragraphs, lists, tables, links…) is kept. The answer contains the stored subject and body.
 
 #### `update_email_template`
 - **Input:** `{ templateId, name?, description?, subject?, template?, public?, confirm? }` — at least one change.
@@ -455,7 +455,8 @@ call. The fields disappear from forms and lists, records keep their values, and 
 
 - **Input:** `{ module, fieldIds, confirm: true }` — `fieldIds`: 1–25 `fieldId`s from `get_field_layout`.
 - **Output:** `{ deleted: true, fields: [{ fieldId, apiFieldName, recordsWithValue, listViewsUsingField }] }`
-- System fields cannot be deleted (`… is a system field and cannot be deleted; hide it with update_field (hidden: true) instead.`).
+- System fields cannot be deleted (`… is a system field and cannot be deleted; hide it with update_field (hidden: true) instead.`);
+  required system fields cannot be hidden either (`… is a required system field of <module> and cannot be removed at all.`).
 - Delete several fields of a module in **one** call after one confirmation — not one call per field.
 
 ### Saved list views
@@ -526,7 +527,9 @@ All saved list views of the company, whoever may see them.
   `canSendEmail`, `canSendSms`, `canSeeEmail` (`none` | `see` | `seeSquad` | `seeOthers`), `canEditEmailTemplate`
   (`none` | `modify` | `modifyShared` | `modifySquad` | `modifyOthers`)…
 - Rights to manage users can be granted only in the CRM; over MCP the `user` module accepts only `see`, `seeOthers`,
-  `seeSquad`, `seeRole` (any right may be revoked).
+  `seeSquad`, `seeRole` (its other rights may only be revoked). Rights to manage roles, fields, field rules, company
+  settings and squads are also granted only in the CRM. Sending any right of a `derivedFrom` module is refused — set
+  the matching `customPermissions` key instead.
 - **Output:** the new role (`userCount: 0`).
 
 #### `update_role`

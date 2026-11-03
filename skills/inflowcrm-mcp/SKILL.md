@@ -77,7 +77,7 @@ These rules apply to records, templates and CRM configuration alike.
 - **One confirmation per batch, not per item.** Show the user the complete list (records, fields, roles, list views,
   templates) and ask **once**. Several fields of one module = **one** `delete_field` call with all of them in
   `fieldIds` (max 25) and `confirm: true`. Do not ask field by field, and do not split an agreed batch into many
-  calls.
+  calls — split only where a limit forces it (25 fields, 50 records), without asking again.
 - **`confirm: true` only after the user really agreed in this conversation** — never by default, never "because the
   tool refuses otherwise", never because earlier consent covered something else. Tools that need it:
   `delete_field`, `delete_list_view`, `delete_role`, `update_role`, all `delete_*_template`, and
@@ -131,7 +131,7 @@ API key. If they are not in your tool list, the user does such changes in the CR
 - **Fields:** `get_field_layout` first (it shows `fieldId`, system fields and `locks`). `create_field` sets the type and
   Api field name for good. `update_field` changes pick lists either with the full `pickListValues` or with
   `addPickListValues` / `removePickListValues`; removing a value does not change records — report
-  `recordsStillUsing` to the user. System fields cannot be deleted (hide them instead); pick lists that drive
+  `recordsStillUsing` to the user. System fields cannot be deleted (non-required ones can be hidden instead); pick lists that drive
   pipelines or statuses are changed in the CRM. `delete_field` is all or nothing.
 - **List views:** `get_module_fields` + `get_list_views` first. A view needs an audience (`public: true` or roles /
   users / squads). In `update_list_view` a property you send replaces the stored one — send the full new value.
