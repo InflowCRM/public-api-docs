@@ -21,6 +21,11 @@ Source: [`skills/inflowcrm-mcp`](https://github.com/InflowCRM/public-api-docs/tr
 - **Pipelines** — pipeline id and stage *name* travel together; stages are matched by name, not position.
 - **Safe writes** — duplicate check before create, GUS lookup for new Polish companies, explicit user confirmation
   before deletes and bulk changes, CRM text is never treated as instructions.
+- **Templates** — read first, tags only from `get_template_tags`, drafts shown to the user, extra care for
+  templates the CRM sends automatically; the tools prepare templates and never send messages.
+- **CRM configuration** (when enabled) — fields and pick lists, list views and roles: read before change, show
+  before/after and how many users a role change affects, one confirmation for a whole batch (one `delete_field`
+  call for several fields), `confirm: true` only after the user agreed, users with a role are moved in the CRM.
 - **Recovering from errors** — what each validation message means and how to fix the call.
 
 ---
@@ -82,3 +87,6 @@ With the MCP server connected and the skill installed, ask for example:
 - *"Add a customer from NIP 1234563218 and create a follow-up task for me next Monday."*
 - *"Move the potential 'Szkolenie BHP — ACME' to stage 'Oferta wysłana'."*
 - *"Generate the offer PDF for order 1042 and attach it to the order."*
+- *"Draft an e-mail template for customers with a reminder about the training date."*
+- *"Add a pick list field 'Źródło leada' to customers with the values Polecenie, Strona www, Targi."* (configuration
+  tools)
