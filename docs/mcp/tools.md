@@ -115,8 +115,9 @@ How to read the answer:
 - **Order and `truncated`:** with a date group the order follows the `groupBy` keys, oldest first within a key, so
   `truncated: true` can cut whole owners, not only newer months. Other groups sort biggest first. Without `groupBy` the
   answer is always one group.
-- **Roles:** a field hidden from the user is refused like an unknown field. A team member can group only by relations
-  that their record reads return (such as owner, customer, contact or pipeline).
+- **Roles:** a team member can aggregate on the fields their role lets them read. A field hidden from them is refused
+  like an unknown field, and so is a relation stored under the same path as a hidden field. A related record they
+  cannot see comes back with `label: null`.
 - **Limits:** 30 calls per minute per user. A query running over 10 seconds fails with a message asking to narrow
   the filters or groups.
 
