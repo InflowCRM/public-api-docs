@@ -17,10 +17,10 @@ your company has asked InflowCRM to allow them ([details](README.md#who-can-sign
 > Keep the key out of files you commit. Where a tool can read it from an environment variable, use
 > `INFLOWCRM_API_KEY`.
 
-**Jump to:** [claude.ai and Claude Desktop](#claudeai-and-claude-desktop-connector) · [ChatGPT](#chatgpt) ·
+**Jump to:** [claude.ai and Claude Desktop](#claudeai-and-claude-desktop-connector) · [ChatGPT](#chatgpt) · [Gemini](#gemini) ·
 [Universal setup prompt](#universal-setup-prompt) · [Claude Code](#claude-code) ·
-[Claude Desktop with an API key](#claude-desktop-with-an-api-key) · [OpenAI Codex CLI](#openai-codex-cli) · [Gemini CLI](#gemini-cli) ·
-[Cursor](#cursor) · [VS Code](#vs-code-github-copilot) · [Windsurf](#windsurf) · [n8n](#n8n) ·
+[Claude Desktop with an API key](#claude-desktop-with-an-api-key) · [OpenAI Codex CLI](#openai-codex-cli) ·
+[Cursor](#cursor) · [VS Code](#vs-code-github-copilot) · [n8n](#n8n) ·
 [Python](#python-mcp-sdk) · [OpenAI Agents SDK](#openai-agents-sdk) · [LangChain / LangGraph](#langchain-langgraph)
 
 ---
@@ -62,17 +62,67 @@ otherwise paste the [skill text](skill.md#copy-and-paste) into a Project's instr
 
 ## ChatGPT
 
-ChatGPT connects to remote MCP servers as **custom connectors (apps)** with OAuth. Availability depends on your
-ChatGPT plan, and in business workspaces an admin may have to allow custom connectors.
+ChatGPT connects to remote MCP servers as **custom MCP plugins** with OAuth. You add one in ChatGPT on the web.
+Availability depends on your ChatGPT plan, and workspace permissions or Lockdown may block custom servers — ask your
+workspace admin if you do not see the option.
 
-1. Open **Settings → Apps & Connectors** (turn on **Developer mode** under *Advanced settings* if your plan requires
-   it) and create a new connector.
-2. Enter the MCP server URL `https://mcp.inflowcrm.pl` and choose **OAuth** as the authentication.
-3. Sign in exactly as in steps 3–4 for [claude.ai](#claudeai-and-claude-desktop-connector): your CRM address, log
-   in, allow.
-4. Use the connector in a chat. Keep ChatGPT's confirmation for write actions switched on.
+1. Open [ChatGPT Plugins](https://chatgpt.com/plugins), click **+** and choose **Add custom MCP server**.
+2. Name it `InflowCRM`. Under **Connection** enter the server URL `https://mcp.inflowcrm.pl`.
+3. Choose **OAuth** as the authentication and leave any client credentials empty — ChatGPT registers itself.
+4. Review the risk warning, choose **I understand and want to continue**, then **Create as a plugin**.
+5. Find the plugin under your personal plugins (or the workspace where you created it) and install it. Sign in exactly
+   as in steps 3–4 for [claude.ai](#claudeai-and-claude-desktop-connector): your CRM address, log in, allow.
+6. In a chat, type `@` and pick the plugin, then ask e.g. *"How many customers do we have?"*.
+
+ChatGPT asks for confirmation before write actions. Review what the tool is about to send, and keep the "remember"
+option off for tools that change or delete data. When InflowCRM enables more tools for your company, open the app's
+details page in the app settings and refresh it; you can also switch individual tools off there.
 
 Skill: paste the [skill text](skill.md#copy-and-paste) into the project's or custom GPT's instructions.
+
+---
+
+## Gemini
+
+### Gemini CLI
+
+Sign in with your CRM account — add the server without a header, then start `gemini` and run `/mcp auth inflowcrm`:
+
+```bash
+gemini mcp add --scope user --transport http inflowcrm https://mcp.inflowcrm.pl
+```
+
+Or use an API key:
+
+```bash
+gemini mcp add --scope user --transport http inflowcrm https://mcp.inflowcrm.pl \
+  --header "Authorization: Bearer YOUR_API_KEY"
+```
+
+Check with `gemini mcp list`, or with `/mcp` inside Gemini CLI — before you sign in the server shows as disconnected.
+Do not add `--trust`: it switches off the confirmations for every tool. Skill: add the
+[skill text](skill.md#copy-and-paste) to `~/.gemini/GEMINI.md`.
+
+### Gemini app
+
+Google currently offers custom apps only in **English**, to users **aged 18+ in the US**, signed in with a **personal
+Google account** (not work or school), and with **Keep Activity** on. If that rules you out — for example you are in
+Poland — use Gemini CLI, or another tool from this page.
+
+1. Go to [gemini.google.com](https://gemini.google.com) on a computer (custom apps can only be connected on the web;
+   the mobile app can use them afterwards).
+2. Open **Settings → Connected Apps** and, under **Custom apps**, choose **Add a custom app**.
+3. Enter `https://mcp.inflowcrm.pl` and click **Next**. Leave the advanced fields empty — Gemini registers itself.
+4. Sign in as in steps 3–4 for [claude.ai](#claudeai-and-claude-desktop-connector): your CRM address, log in, allow.
+5. In a prompt, type `@` and pick the app.
+
+Gemini asks for confirmation before write actions. Skill: paste the [skill text](skill.md#copy-and-paste) into your
+prompt or a Gem's instructions.
+
+### Gemini Enterprise
+
+The custom MCP connector in Gemini Enterprise needs an OAuth client registered in advance, which is not covered by the
+sign-in flow above. [Contact us](../contact.md) if your company wants to connect it.
 
 ---
 
@@ -195,17 +245,6 @@ Skill: add the [skill text](skill.md#copy-and-paste) to `~/.codex/AGENTS.md` (gl
 
 ---
 
-## Gemini CLI
-
-```bash
-gemini mcp add --scope user --transport http inflowcrm https://mcp.inflowcrm.pl \
-  --header "Authorization: Bearer YOUR_API_KEY"
-```
-
-Check with `gemini mcp list`. Skill: add the [skill text](skill.md#copy-and-paste) to `~/.gemini/GEMINI.md`.
-
----
-
 ## Cursor
 
 *Config example* — `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project):
@@ -246,23 +285,6 @@ Skill: save the [skill text](skill.md#copy-and-paste) as a rule in `.cursor/rule
 
 Use the tools in Copilot Chat's **Agent** mode. Skill: add the [skill text](skill.md#copy-and-paste) to
 `.github/copilot-instructions.md`.
-
----
-
-## Windsurf
-
-*Config example* — `~/.codeium/windsurf/mcp_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "inflowcrm": {
-      "serverUrl": "https://mcp.inflowcrm.pl",
-      "headers": { "Authorization": "Bearer YOUR_API_KEY" }
-    }
-  }
-}
-```
 
 ---
 

@@ -186,7 +186,7 @@ Returns all available processes for a specific module.
 ```
 
 > **Note:** This endpoint currently supports the `order` and `potential` modules only.
-> The stage index (position in `stagesNames` array, 0-based) is used when setting a record's stage. See [Pipelines & Stages](docs/rest-api/modules.md#pipelines-amp-stages) for details.
+> The stage index (position in `stagesNames` array, 0-based) is used when setting a record's stage. See [Pipelines & Stages](modules.md#pipelines-amp-stages) for details.
 
 **Response:**
 ```json
@@ -989,9 +989,9 @@ curl -X POST "https://srv.inflowcrm.pl/api/make/getModuleFields" \
 
 - Only modules available in your bundle can be accessed.
 - **Only fields with an 'Api field name' set in the InflowCRM UI can be used in the API.**
-- Field requirements and types vary by module. See [modules.md](docs/rest-api/modules.md) for details.
+- Field requirements and types vary by module. See [modules.md](modules.md) for details.
 - File uploads are only supported on modules with file-type fields.
 
-> For more details on file uploads, see [file-uploads.md](docs/rest-api/file-uploads.md).
+> For more details on file uploads, see [file-uploads.md](file-uploads.md).
 
 ---

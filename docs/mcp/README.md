@@ -1,7 +1,7 @@
 # MCP Server (AI assistants)
 
 InflowCRM ships a [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server. It lets an AI assistant —
-claude.ai, ChatGPT, Claude Desktop, Claude Code, Cursor, VS Code Copilot, your own agent — read and update the CRM
+claude.ai, ChatGPT, Gemini, Claude Desktop, Claude Code, Cursor, VS Code Copilot, your own agent — read and update the CRM
 data of **one company** in plain language: find customers, count open deals, move a potential to the next stage,
 attach a file, generate a PDF offer, prepare SMS / e-mail / document templates, look up a Polish company in GUS.
 
@@ -20,7 +20,7 @@ There are two ways to connect. Both use the same address and the same tools.
 
 | | Sign in with your CRM account (OAuth) | API key |
 |---|---|---|
-| Best for | claude.ai, ChatGPT, Claude Desktop connectors — and Claude Code | Claude Code, Codex, Cursor, VS Code, n8n, scripts, your own agents |
+| Best for | claude.ai, ChatGPT, Gemini, Claude Desktop connectors — and Claude Code, Gemini CLI | Claude Code, Gemini CLI, Codex, Cursor, VS Code, n8n, scripts, your own agents |
 | Who connects | A company administrator (employees only when your company has this enabled — see *Who can sign in* below) | Anyone holding the key of an integration user |
 | Acts as | The signed-in user, with their rights | The integration user (full rights in your company's data) |
 | Setup | Add a custom connector with the URL, sign in on your company's CRM page, allow access | Send the key in the `Authorization` header |
@@ -131,7 +131,7 @@ apiKey: YOUR_API_KEY
 
 ## 🔌 Connecting a client
 
-### claude.ai, ChatGPT, Claude Desktop
+### claude.ai, Claude Desktop
 
 Add `https://mcp.inflowcrm.pl` as a custom connector and sign in — see
 **[Connect your AI tool](clients.md#claudeai-and-claude-desktop-connector)**.
@@ -158,7 +158,7 @@ Add `--scope user` to make the server available in every project.
 > Claude Code reads the tool list when it connects. After InflowCRM adds tools or enables a feature for your
 > company, run `/mcp` and reconnect.
 
-### Codex, Gemini CLI, Cursor, VS Code, Windsurf, n8n, Python, OpenAI Agents SDK, LangChain
+### ChatGPT, Gemini, Codex, Cursor, VS Code, n8n, Python, OpenAI Agents SDK, LangChain
 
 Step-by-step configs for each tool — plus a **universal setup prompt** that lets any AI agent configure the
 connection and install the skill by itself — are on **[Connect your AI tool](clients.md)**.

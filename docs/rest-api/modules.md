@@ -24,7 +24,7 @@ This document describes all modules supported by the Public API, their field typ
 
 Only modules available in your bundle can be accessed.
 
-> **Note:** All supported modules can also receive webhook notifications for create, update, and delete events. See [Webhook API](docs/rest-api/webhooks.md) for details.
+> **Note:** All supported modules can also receive webhook notifications for create, update, and delete events. See [Webhook API](webhooks.md) for details.
 
 ---
 
@@ -120,7 +120,7 @@ The `order` and `potential` modules support **pipelines** (also called processes
 
 ### Getting available pipelines
 
-Use [`POST /api/getProcessesForModule`](docs/rest-api/endpoints.md#post-apigetprocessesformodule) to retrieve all pipelines and their stages:
+Use [`POST /api/getProcessesForModule`](endpoints.md#post-apigetprocessesformodule) to retrieve all pipelines and their stages:
 
 ```json
 // Request

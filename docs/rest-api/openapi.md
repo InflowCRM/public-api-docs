@@ -10,7 +10,7 @@ The InflowCRM Public API provides an OpenAPI 3.0 specification that describes al
 - Error response formats
 - Advanced filtering schemas
 
-> **Note:** The GraphQL API is not covered by this spec — see the [GraphQL documentation](docs/graphql/schema.md) instead.
+> **Note:** The GraphQL API is not covered by this spec — see the [GraphQL documentation](../graphql/schema.md) instead.
 
 ## Download
 
