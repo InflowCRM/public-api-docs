@@ -190,7 +190,7 @@ Tool results come back as JSON text in `result.content[0].text`; failures set `r
 
 ## 🧰 What the assistant can do
 
-Up to **37 tools** (depending on your plan and rights), grouped by capability (full reference:
+Up to **39 tools** (depending on your plan, rights and enabled features), grouped by capability (full reference:
 **[MCP Tools](tools.md)**):
 
 | Capability | Tools |
@@ -200,6 +200,7 @@ Up to **37 tools** (depending on your plan and rights), grouped by capability (f
 | Write records | `create_record`, `update_record`, `create_records` / `update_records` (bulk, up to 50), `delete_record` (to trash) |
 | Pipelines | `get_pipelines`, `get_pipeline_summary` (records and value per stage) |
 | Files | `list_record_files`, `download_file`, upload via `create_record` / `update_record` |
+| Messages | `list_record_messages`, `get_message` (read sent SMS and e-mails; off by default, see below) |
 | Users | `list_users`, `get_user` (read only — MCP never edits users) |
 | Documents | `list_document_templates`, `generate_document` (PDF, optionally saved to the record) |
 | Templates | `get_template_tags`; SMS: `list_sms_templates`, `get_sms_template`, `create_sms_template`, `update_sms_template`, `delete_sms_template`; e-mail: `list_email_templates`, `get_email_template`, `create_email_template`, `update_email_template`, `delete_email_template`; documents: `get_document_template`, `create_document_template`, `update_document_template`, `delete_document_template` |
@@ -208,10 +209,14 @@ Up to **37 tools** (depending on your plan and rights), grouped by capability (f
 The template tools **prepare templates** — they do not send SMS or e-mail. Messages are sent by the CRM itself
 (manually or by the template's automatic sending), as before.
 
+The **message tools only read** what was sent from a record. Correspondence is more sensitive than record fields, so
+they are off by default: ask InflowCRM to enable them for your company. They then work for all of the company's API
+keys and signed-in users, within each user's role.
+
 ### 🛠️ Configuration tools
 
 Companies that want the assistant to help **configure the CRM** can ask InflowCRM to enable the configuration tools.
-They add **13 tools** (up to **50** in total):
+They add **13 tools** (up to **52** in total):
 
 | Capability | Tools |
 |---|---|
@@ -285,6 +290,7 @@ Every tool belongs to a scope:
 | `records:delete` | `delete_record` |
 | `files:read` | `list_record_files`, `download_file` |
 | `files:write` | attaching files in `create_record` / `update_record`, `saveToRecord` in `generate_document` |
+| `messages:read` | `list_record_messages`, `get_message` |
 | `users:read` | `list_users`, `get_user` |
 | `lookup` | `lookup_company_gus`, `get_pipelines` |
 | `documents:generate` | `list_document_templates`, `generate_document` |
@@ -296,7 +302,8 @@ Every tool belongs to a scope:
 
 > **Today every API key receives all scopes**, and a signed-in user is limited by their role instead. Per-key scopes
 > are planned. Until then, restrict tools in your MCP client as shown above. The `fields:`, `lists:` and `roles:`
-> tools additionally need the configuration tools enabled for the company.
+> tools additionally need the configuration tools enabled for the company. `messages:read` is the exception: no key or
+> user has it until InflowCRM enables messages for the company, and then all of them do.
 
 ### Built-in safeguards
 
@@ -334,6 +341,7 @@ confirmation on for deletes, bulk tools, template writes and configuration tools
 | Document generation | **20 calls per 5 minutes** | `generate_document` |
 | Template writes | **60 calls per 5 minutes** | create / update / delete of SMS, e-mail and document templates together |
 | Configuration writes | **30 calls per 5 minutes** | create / update / delete of fields, list views and roles together |
+| Message reads | **120 calls per 5 minutes** | `list_record_messages` + `get_message` together |
 | Failed authentication | 300 per 5 minutes per IP | counts `401` responses; once exceeded, every request from that IP gets `429` until the window resets |
 
 The request limit returns HTTP `429`; the per-tool limits return a tool error such as
@@ -344,6 +352,8 @@ The request limit returns HTTP `429`; the per-tool limits return a tool error su
 | Item | Limit |
 |---|---|
 | Records per page | 50 (default 20) |
+| Messages per page | 50 (default 20), offset up to 500 |
+| Message text in `get_message` | 20,000 characters, longer text is cut and marked |
 | Ids per `get_records_by_ids` | 50 |
 | Items per bulk call | 50 |
 | Fields per `delete_field` | 25 |
