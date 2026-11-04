@@ -18,7 +18,10 @@ connecting, authentication and limits.
 - A signed-in (OAuth) user works within their role; the API key acts as the integration user. A module the role cannot
   see is not in `list_modules`, its templates are not listed, and a tool naming it answers
   `PERMISSION_DENIED: Your CRM role does not allow this operation on module '<module>'. Retrying will not help: tell the user to ask their CRM administrator for access.`
-  The same text answers a write the role does not allow.
+  The same text answers a write the role does not allow. For a signed-in user `get_module_fields` and `get_template_tags`
+  also leave out fields hidden by a field rule and, in the tags, relations and loops to modules the role cannot see. A
+  role that may write a module but not read it gets
+  `VALIDATION_ERROR: The data was refused. Your CRM role cannot read the fields of this module, so the details cannot be shown.`
 
 ---
 
@@ -178,7 +181,9 @@ Moves a record to the CRM trash. → `{ id, deleted: true }`
   changed and sent back — unless it was read with `expandRelations` (send relations back as ids) or holds old values
   that no longer pass validation.
 - **Relations** take a record id (multi-relations an array of ids); `null` or `""` clears the relation. Ids of
-  records that do not exist in your company are rejected.
+  records that do not exist in your company are rejected. For a signed-in user a new id must also be a record their role
+  can read; both cases answer `VALIDATION_ERROR: Field '<field>' references a record that does not exist`. A relation
+  already stored on the record does not block changing other fields.
 - **Owner:** a new record belongs to the user behind the connection (the integration user for an API key). To assign someone else, send a user id from `list_users`
   in the field whose `relationField` is `owner` (see `get_module_fields` for its Api field name).
 - **Pipelines** (`potential`, `order`): set the pipeline id (from `get_pipelines`) and the **stage name** together.
@@ -261,6 +266,9 @@ Renders a template for one record into a PDF (≤ 5 MB) and returns it. Limit: 2
 - **Input:** `{ templateId, recordId, saveToRecord? }` — the record must belong to the template's module.
   `saveToRecord: true` also stores the PDF as a file of the record.
 - **Output:** text item `{ fileName, fileSize, fileId? }` + an embedded PDF `resource` (base64).
+- A signed-in user needs read access to every related record the template prints. Otherwise:
+  `PERMISSION_DENIED: This template prints a related record your CRM role cannot read, so the document cannot be generated for this record. Tell the user to ask their CRM administrator for access or to use another template.`
+  A template of a module their role cannot see answers `RESOURCE_NOT_FOUND: Template not found…`.
 
 ---
 

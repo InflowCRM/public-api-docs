@@ -103,7 +103,9 @@ These rules apply to records, templates and CRM configuration alike.
 ## 5. Documents and files
 
 - PDF from a template: `list_document_templates` (optionally per module) → `generate_document` with a record of
-  the template's module. Add `saveToRecord: true` only if the user wants the PDF attached to the record.
+  the template's module. Add `saveToRecord: true` only if the user wants the PDF attached to the record. A signed-in user
+  needs read access to every related record the template prints; `PERMISSION_DENIED` then means another template or an
+  administrator, not a retry.
   Limit: 20 generations per 5 minutes.
 - `list_record_files` → `download_file` (≤ 5 MB; larger files must be opened in InflowCRM).
 
