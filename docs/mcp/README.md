@@ -303,7 +303,8 @@ Every tool belongs to a scope:
 > **Today every API key receives all scopes**, and a signed-in user is limited by their role instead. Per-key scopes
 > are planned. Until then, restrict tools in your MCP client as shown above. The `fields:`, `lists:` and `roles:`
 > tools additionally need the configuration tools enabled for the company. `messages:read` is the exception: no key or
-> user has it until InflowCRM enables messages for the company, and then all of them do.
+> user has it until InflowCRM enables messages for the company, and then all of them do. Switching it off again takes up to
+> about 70 seconds to apply, because the setting is cached.
 
 ### Built-in safeguards
 
