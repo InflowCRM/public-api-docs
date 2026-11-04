@@ -112,8 +112,9 @@ How to read the answer:
 - **Non-numeric values:** a record without a numeric value counts in `count` and does not move the metrics.
 - **Date keys** use Europe/Warsaw time: `2026-07-31` (day), the Monday of the week (week), `2026-07` (month),
   `2026-Q3` (quarter), `2026` (year).
-- **Order and `truncated`:** date groups sort oldest first, so `truncated: true` means newer ones were cut; other
-  groups sort biggest first. Without `groupBy` the answer is always one group.
+- **Order and `truncated`:** with a date group the order follows the `groupBy` keys, oldest first within a key, so
+  `truncated: true` can cut whole owners, not only newer months. Other groups sort biggest first. Without `groupBy` the
+  answer is always one group.
 - **Roles:** a field hidden from the user is refused like an unknown field. A team member can group only by relations
   that their record reads return (such as owner, customer, contact or pipeline).
 - **Limits:** 30 calls per minute per user. A query running over 10 seconds fails with a message asking to narrow
