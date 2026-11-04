@@ -1,6 +1,6 @@
 ---
 name: inflowcrm-mcp
-description: Work with InflowCRM data through the InflowCRM MCP server (tools such as list_modules, get_module_fields, search_records, create_record, get_pipeline_summary, generate_document, get_template_tags, create_email_template, get_field_layout, update_role, lookup_company_gus). Use when the user asks to find, count, report on, create, update or delete CRM records (customers, contacts, potentials/deals, orders, tasks, notes, events, trainings), move deals between pipeline stages, attach or download record files, generate PDF documents, prepare SMS / e-mail / document templates, configure the CRM (fields, pick lists, list views, roles), or look up a Polish company by NIP/REGON/KRS.
+description: Work with InflowCRM data through the InflowCRM MCP server (tools such as list_modules, get_module_fields, search_records, aggregate_records, create_record, get_pipeline_summary, generate_document, get_template_tags, create_email_template, get_field_layout, update_role, lookup_company_gus). Use when the user asks to find, count, report on, create, update or delete CRM records (customers, contacts, potentials/deals, orders, tasks, notes, events, trainings), move deals between pipeline stages, attach or download record files, generate PDF documents, prepare SMS / e-mail / document templates, configure the CRM (fields, pick lists, list views, roles), or look up a Polish company by NIP/REGON/KRS.
 ---
 
 # InflowCRM via MCP
@@ -34,6 +34,9 @@ Cache this per conversation — module fields rarely change mid-task.
 - `truncated: true` in a `query` answer = 500 or more candidates matched; ask for or use a longer fragment.
   Counts in such an answer are lower bounds.
 - **"How many…"** → `count_records`. **Funnel / pipeline value** → `get_pipeline_summary` (one call, no paging).
+- **Totals and breakdowns** ("sales per rep in Q3", "leads per source", "average order month by month") →
+  `aggregate_records`, never by paging `search_records`. Amounts come back per currency in `byCurrency`: report them
+  per currency and do not add them up. If `truncated: true`, say the list is incomplete or narrow the filters.
 - **Dates:** a date-only value (`2026-05-10`) in `filters` matches that whole day. A DateRange field takes
   `[from, to]` and matches ranges that *start* in that window (only `from` = starts on that day; `["", to]` = starts
   up to `to`). For "created this month" use `advancedFilter` on `createdTime` with ISO timestamps; range
