@@ -67,12 +67,12 @@ https://srv.inflowcrm.pl
 
 ## 📚 Documentation Index
 
-- [Endpoints Reference](docs/rest-api/endpoints.md)
-- [File Upload Guide](docs/rest-api/file-uploads.md)
-- [Modules & Fields](docs/rest-api/modules.md)
-- [Webhook API](docs/rest-api/webhooks.md)
-- [Error Handling](docs/rest-api/errors.md)
-- [Full OpenAPI 3.0 Spec](docs/rest-api/openapi.yaml)
+- [Endpoints Reference](endpoints.md)
+- [File Upload Guide](file-uploads.md)
+- [Modules & Fields](modules.md)
+- [Webhook API](webhooks.md)
+- [Error Handling](errors.md)
+- [Full OpenAPI 3.0 Spec](openapi.md)
 
 ---
 
@@ -105,9 +105,9 @@ https://srv.inflowcrm.pl
 ## 📝 Next Steps
 
 - Explore endpoints and guides using the sidebar.
-- Review the [OpenAPI Spec](docs/rest-api/openapi.yaml) for schema details.
-- See [Endpoints Reference](docs/rest-api/endpoints.md) for all available API methods.
-- Check [webhooks.md](docs/rest-api/webhooks.md) for real-time integration.
+- Review the [OpenAPI Spec](openapi.md) for schema details.
+- See [Endpoints Reference](endpoints.md) for all available API methods.
+- Check [webhooks.md](webhooks.md) for real-time integration.
 
 ---
 

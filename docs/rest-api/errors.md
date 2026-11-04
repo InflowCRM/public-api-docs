@@ -84,4 +84,4 @@ All errors use a consistent format:
 
 ---
 
-_For more details, see [README.md](docs/rest-api/README.md) and [endpoints.md](docs/rest-api/endpoints.md)._
+_For more details, see [README.md](README.md) and [endpoints.md](endpoints.md)._

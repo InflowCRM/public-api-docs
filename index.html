@@ -16,12 +16,20 @@
 <body>
   <div id="app"></div>
   <script>
+    // Links published before relativePath was enabled pointed at #/clients, #/tools and #/skill.
+    var legacyMcpPage = location.hash.match(/^#\/(clients|tools|skill)(\?.*)?$/);
+    if (legacyMcpPage) {
+      location.replace('#/docs/mcp/' + legacyMcpPage[1] + (legacyMcpPage[2] || ''));
+    }
+  </script>
+  <script>
     window.$docsify = {
       name: 'InflowCRM API Documentation',
       logo: 'logo.png',
       repo: 'https://github.com/InflowCRM/public-api-docs',
       loadSidebar: true,
       homepage: 'README.md',
+      relativePath: true,
       themeable: {
         readyTransition : true,
         responsiveTables: true

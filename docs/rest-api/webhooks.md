@@ -850,9 +850,9 @@ For webhook-related issues:
 
 ## Further Reading
 
-- [Main API Documentation](docs/rest-api/README.md)
-- [Endpoints Reference](docs/rest-api/endpoints.md)
-- [Error Handling](docs/rest-api/errors.md)
+- [Main API Documentation](README.md)
+- [Endpoints Reference](endpoints.md)
+- [Error Handling](errors.md)
 
 
 ---
