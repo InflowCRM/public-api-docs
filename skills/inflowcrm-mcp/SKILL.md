@@ -37,7 +37,8 @@ Cache this per conversation — module fields rarely change mid-task.
 - **Dates:** a date-only value (`2026-05-10`) in `filters` matches that whole day. A DateRange field takes
   `[from, to]` and matches ranges that *start* in that window (only `from` = starts on that day; `["", to]` = starts
   up to `to`). For "created this month" use `advancedFilter` on `createdTime` with ISO timestamps; range
-  conditions on custom Date fields are not reliable — use `filters` for those.
+  conditions work the same on custom Date and Datetime fields. `equal` there compares the exact moment, so for a whole
+  day use `filters`.
 - Results are newest first by default; pages hold max 50 (default 20). Read `pagination.total` before claiming
   "all" — page further or count instead of extrapolating.
 - Set `expandRelations: true` when you will show related records or owners to the user — you get
@@ -134,7 +135,9 @@ API key. If they are not in your tool list, the user does such changes in the CR
   `recordsStillUsing` to the user. System fields cannot be deleted (non-required ones can be hidden instead); pick lists that drive
   pipelines or statuses are changed in the CRM. `delete_field` is all or nothing.
 - **List views:** `get_module_fields` + `get_list_views` first. A view needs an audience (`public: true` or roles /
-  users / squads). In `update_list_view` a property you send replaces the stored one — send the full new value.
+  users / squads). In `update_list_view` a property you send replaces the stored one — send the full new value. A deleted
+  field shows as `{ field: null, fieldId }`: as a column or sort it may be sent back and is dropped; a condition on it is
+  refused, so ask the user before leaving it out, because the view then shows more records.
 - **Roles:** `list_roles` → `get_role` before `update_role`; only the rights you send change. Rights to manage users
   are granted only in the CRM. `delete_role` works only for a role without users.
 - Configuration writes are limited to 30 per 5 minutes (all kinds together).
@@ -151,7 +154,7 @@ API key. If they are not in your tool list, the user does such changes in the CR
 | `Unknown tag(s) in …` | Use tags from `get_template_tags` |
 | `… call again with confirm: true` / invalid `confirm` | Show the change to the user, get their OK, then call again with `confirm: true` |
 | `CONFLICT: …` | The item clashes with the current state (name taken, role still has users) — follow the message |
-| `PERMISSION_DENIED: …` / `FORBIDDEN: …` | The connected user's role does not allow it — tell the user; do not look for a way around it |
+| `PERMISSION_DENIED: …` / `FORBIDDEN: …` | The connected user's role does not allow it — tell the user, do not retry and do not look for a way around it. It is not a CRM failure |
 | `Too many …, retry in N s.` / HTTP 429 | Wait, or reduce calls (count/summary instead of paging) |
 | `INTERNAL_ERROR: …` | Retry once later; then report to the user |
 
