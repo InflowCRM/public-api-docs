@@ -353,7 +353,8 @@ The request limit returns HTTP `429`; the per-tool limits return a tool error su
 |---|---|
 | Records per page | 50 (default 20) |
 | Messages per page | 50 (default 20), offset up to 500 |
-| Message text in `get_message` | 20,000 characters, longer text is cut and marked |
+| Message text in `get_message` | 20,000 characters, longer text is cut and marked; e-mail HTML over 300,000 characters is cut before conversion |
+| Message subject / recipients | 500 characters / 20 addresses per list, cut and marked |
 | Ids per `get_records_by_ids` | 50 |
 | Items per bulk call | 50 |
 | Fields per `delete_field` | 25 |
