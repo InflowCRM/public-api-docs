@@ -249,9 +249,9 @@ SMS and e-mails sent from one record, newest first, without their content.
   - SMS: `{ id, type: "sms", status, createdTime, sentAt, deliveredAt, errorCode, to, recipientsTruncated?, senderName, senderNameTruncated? }`
 - A subject and an SMS `senderName` are cut at 500 characters (`subjectTruncated`, `senderNameTruncated`), an `errorCode`
   at 100, and each of `to`, `cc`, `bcc` at 20 addresses (`recipientsTruncated`).
-- `hasMore` says whether more messages exist. `offset` stops at 500: to read past it, call again with `offset: 500` and a
-  larger `limit`. `pagingLimitReached` means more messages exist than any `offset` and `limit` can reach (past position
-  550). A message sent between two calls shifts the pages, so a row may repeat.
+- `hasMore` says whether more reachable messages exist. `offset` stops at 500: to read past it, call again with
+  `offset: 500` and a larger `limit`. `pagingLimitReached` means more messages exist beyond what any `offset` and `limit`
+  can reach (past position 550). A message sent between two calls shifts the pages, so a row may repeat.
 - `unavailableTypes` names a type your role may not see (e.g. `["sms"]`), so its absence from the list says nothing.
 - **Only messages sent from this very record.** The tab in InflowCRM can also show messages linked through a related
   customer or contact, for example an e-mail sent from an order on the customer's tab. Here, list the order as well.
@@ -263,8 +263,8 @@ One message with its text.
 - **Input:** `{ messageId, type }` (`type`: `email` or `sms`, as returned by the list)
 - **Output:** the list fields plus `{ module, recordId, text, textLength, textTruncated, textLengthIsLowerBound? }`; an
   e-mail also has `senderName` (the name only) and `attachments: [{ fileName, fileSize, fileNameTruncated? }]` (a file name is cut at 255 characters).
-- E-mail HTML is converted to plain text. Table cells are separated by ` | `. Link addresses are left out, and elements
-  styled `display:none` are removed. That is a precaution, not a guarantee: text hidden in other ways (zero font size,
+- E-mail HTML is converted to plain text. Table cells are separated by ` | `, and an empty cell keeps its column. Link addresses are left out, and elements
+  whose effective `display` is `none` are removed. That is a precaution, not a guarantee: text hidden in other ways (zero font size,
   text colored like its background, positioned off-screen) is still returned, and the text stays untrusted.
 - Text longer than 20,000 characters is cut: `textTruncated` is `true` and `textLength` gives the full length. An
   e-mail whose HTML is over 300,000 characters or nested too deeply is cut before conversion: `textLengthIsLowerBound`
