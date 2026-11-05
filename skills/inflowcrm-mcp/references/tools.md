@@ -125,10 +125,14 @@ Several records of one module (max 50 ids), paginated. Ids that do not exist are
 `advancedFilter` also accepts the system fields `id`, `createdTime`, `modifiedTime`, `createdBy`, `modifiedBy`,
 `owner`, `recordNumber`. Unknown field names are rejected with the list of valid ones.
 
-> Conditions on your own Date and Datetime fields take an ISO date or the field's date format; a value that is no date is
-> `VALIDATION_ERROR: Wrong value type: …`. `equal` compares the exact moment: a date-only value (`2026-05-10`) matches
-> what was saved as that date, not a Datetime later that day. For a whole day use `filters`, or `greaterOrEqual` with
-> `lower`.
+> Conditions on your own Date and Datetime fields take an ISO date (`2026-05-10`), an ISO timestamp or the field's
+> date format. A date without a time stands for its **whole day**: `greater` means after that day, `greaterOrEqual`
+> from its start, `lower` before it, `lowerOrEqual` up to its end. `equal`, `notEqual`, `in` and `notIn` with a date
+> without a time are refused (`VALIDATION_ERROR: … whole day …`): use two conditions (`greaterOrEqual` and `lowerOrEqual`
+> in one `AND` filter), `filters` (matches the whole day) or a full timestamp (`2026-05-10T10:30:00Z`, matched as that
+> exact moment). A value that is no date (`true`, `5`, `"foo"`, `2026-02-31`, a format other than ISO or the field's)
+> is `VALIDATION_ERROR: Wrong value type: …`; `""` is accepted only by `equal` and `notEqual` (no date). A condition on
+> a DateRange field other than `isEmpty` / `isNotEmpty` is refused: use `filters` with `[from, to]`.
 
 **Rules**
 
@@ -174,8 +178,9 @@ Moves a record to the CRM trash. → `{ id, deleted: true }`
   - pick list / radio / multi pick list values must be one of `pickListValues` (unless the field is configured to
     accept new items),
   - numbers, dates (the field's date format or ISO `2026-05-10`), checkboxes (`true`/`false`),
-  - e-mail format, NIP (10 digits with a correct checksum, or a VAT id with a country prefix), rating between 0 and the
-    field's maximum (5 unless configured), text length (`length`).
+  - e-mail format, NIP (10 digits with a correct checksum, hyphens and spaces allowed, not all zeros; or a VAT id with a
+    country prefix), rating between 0 and the field's maximum (5 unless configured), text length (`length`). A NIP equal
+    to the one stored is not judged again, so a record with an old bad NIP can be updated in other fields.
 - Unknown keys are rejected with the list of valid fields. Read-only system fields copied from a fetched record
   (`id`, `createdTime`, `modifiedTime`, `createdBy`, `modifiedBy`, `recordNumber`) are ignored, so a record can be read,
   changed and sent back — unless it was read with `expandRelations` (send relations back as ids) or holds old values
@@ -415,7 +420,8 @@ only for a company administrator (signed in) or an API key; an employee never ge
 - `delete_field`, `delete_list_view`, `update_role` and `delete_role` require `confirm: true` — send it only after the
   user agreed. For several changes, ask once for the whole batch. Without it:
   `VALIDATION_ERROR: This change needs confirm: true. Ask the user to approve it, then call again with confirm: true.`
-  The refused call is recorded in the audit log and does not count against the limit.
+  Anything but the boolean `true` (a missing value, `false`, `"true"`, `1`) is refused the same way. The refused call is
+  recorded in the audit log and does not count against the limit.
 - Ids of other companies or deleted items → `RESOURCE_NOT_FOUND: … does not exist.` with the tool to call next.
 - Deletes are soft: the item disappears from the CRM, stored record values are kept.
 
@@ -524,9 +530,12 @@ All saved list views of the company, whoever may see them.
 - **Input:** `{ listId, name?, columns?, conditions?, sorting?, public?, roleIds?, userIds?, squadIds?, visibleAsButton? }`
 - A property you send **replaces** the stored one entirely — read the view first and send the full new value.
   `conditions: {}` clears the filter, `sorting: null` removes the sort. The module cannot change.
-- After a field used by the view is deleted, `get_list_views` shows it as `{ field: null, fieldId }`. Sent back, such a
-  column or sort is dropped. A condition on it is refused with `VALIDATION_ERROR`: leave it out once the user agreed,
-  because the view then shows more records.
+- After a field used by the view is deleted, `get_list_views` shows it as `{ field: null, fieldId }`. Sent back as a
+  column or sort, it is dropped and the answer lists it in `droppedDeletedFields: [{ in: "columns" | "sorting", fieldId }]`.
+  A condition on it is refused with `VALIDATION_ERROR`: leave it out once the user agreed, because the view then shows
+  more records. The same `{ field: null, fieldId }` for something that is not a deleted field (a column outside the
+  module's fields, a field without an Api field name) is refused too, never dropped silently.
+- Wrong values are refused with the path and the allowed options, e.g. `… at conditions.and[0].operator`.
 
 #### `delete_list_view`
 - **Input:** `{ listId, confirm: true }` → `{ deleted: true, listId, name, module }`
