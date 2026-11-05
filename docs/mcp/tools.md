@@ -116,8 +116,9 @@ How to read the answer:
   `truncated: true` can cut whole owners, not only newer months. Other groups sort biggest first. Without `groupBy` the
   answer is always one group.
 - **Roles:** a team member can aggregate on the fields their role lets them read. A field hidden from them is refused
-  like an unknown field, and so is a relation stored under the same path as a hidden field. A related record they
-  cannot see comes back with `label: null`.
+  like an unknown field in `metrics`, `groupBy` and filters, and so is a relation stored under the same path as a hidden
+  field. A related record they cannot see, or one whose label field their role hides, comes back with `label: null`.
+  Records shared with them that have no owner are not counted, the same as in `count_records`.
 - **Limits:** 30 calls per minute per user. A query running over 10 seconds fails with a message asking to narrow
   the filters or groups.
 
