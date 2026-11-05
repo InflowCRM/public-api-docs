@@ -265,8 +265,12 @@ Renders a template for one record into a PDF (≤ 5 MB) and returns it. Limit: 2
 
 - **Input:** `{ templateId, recordId, saveToRecord? }` — the record must belong to the template's module.
   `saveToRecord: true` also stores the PDF as a file of the record.
-- **Output:** text item `{ fileName, fileSize, fileId? }` + an embedded PDF `resource` (base64).
-- A signed-in user needs read access to every related record the template prints. Otherwise:
+- **Output:** text item `{ fileName, fileSize, fileId?, relatedDataOmitted? }` + an embedded PDF `resource` (base64).
+- A signed-in user's document is rendered only from data their CRM role may read: related records they cannot read,
+  fields hidden from the role by a field rule, and the lines of an order or opportunity whose module the role cannot
+  see print as empty text. When something was left out, the text item carries `relatedDataOmitted` (a general
+  message, no record names or values): pass it on, the document may look complete but is not.
+- A template that plainly names a related record the role cannot read is refused with a clear message instead:
   `PERMISSION_DENIED: This template prints a related record your CRM role cannot read, so the document cannot be generated for this record. Tell the user to ask their CRM administrator for access or to use another template.`
   A template of a module their role cannot see answers `RESOURCE_NOT_FOUND: Template not found…`.
 
