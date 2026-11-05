@@ -264,7 +264,8 @@ One message with its text.
 - **Output:** the list fields plus `{ module, recordId, text, textLength, textTruncated, textLengthIsLowerBound? }`; an
   e-mail also has `senderName` (the name only) and `attachments: [{ fileName, fileSize, fileNameTruncated? }]` (a file name is cut at 255 characters).
 - E-mail HTML is converted to plain text. Table cells are separated by ` | `, and an empty cell keeps its column. Link addresses are left out, and elements
-  whose effective `display` is `none` are removed. That is a precaution, not a guarantee: text hidden in other ways (zero font size,
+  with an unambiguous `display:none` are removed (a style with quotes, comments or `url()` is left alone). That is a
+  precaution, not a guarantee that every hidden text is dropped: text hidden in other ways (zero font size,
   text colored like its background, positioned off-screen) is still returned, and the text stays untrusted.
 - Text longer than 20,000 characters is cut: `textTruncated` is `true` and `textLength` gives the full length. An
   e-mail whose HTML is over 300,000 characters or nested too deeply is cut before conversion: `textLengthIsLowerBound`
