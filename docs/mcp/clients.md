@@ -154,13 +154,9 @@ Skill: paste the [skill text](skill.md#copy-and-paste) into the project's or cus
 
 ### Gemini app
 
-> **Use the English page:** [gemini.google.com/customize/connectors?hl=en](https://gemini.google.com/customize/connectors?hl=en).
-> Custom apps are visible only in English (`hl=en` in the address), so they do not appear while Gemini is set to another
-> language. InflowCRM customers using Gemini in Polish had to switch to English, including on the free plan.
-
-Google also lists these requirements: **aged 18+ in the US**, a **personal Google account** (not work or school) and
-**Keep Activity** on. If the option is still missing with English set, check these next, or use another tool from
-this page.
+> **Set Gemini to English.** Custom apps are visible only in English, so use
+> [gemini.google.com/customize/connectors?hl=en](https://gemini.google.com/customize/connectors?hl=en). This works in
+> Poland too, including on the free plan.
 
 1. On a computer, open [the English connectors page](https://gemini.google.com/customize/connectors?hl=en) (custom apps
    can only be connected on the web; the mobile app can use them afterwards).

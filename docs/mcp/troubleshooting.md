@@ -11,10 +11,9 @@ Find what you see, then follow the fix. Setup steps for each app are in [Connect
 
 ### Gemini does not show "Custom apps"
 
-Open [gemini.google.com/customize/connectors?hl=en](https://gemini.google.com/customize/connectors?hl=en). Custom apps
-are visible only in English (`hl=en` in the address), and customers using Gemini in Polish had to switch, including on the
-free plan. If the option is still missing, check Google's other [requirements](clients.md#gemini-app): a personal Google
-account and Keep Activity on. Google also lists age 18+ and the US.
+Set Gemini to **English**: open [gemini.google.com/customize/connectors?hl=en](https://gemini.google.com/customize/connectors?hl=en).
+Custom apps are visible only in English. This works in Poland too, including on the free plan. If the option is still
+missing, check that you use a personal Google account with Keep Activity on.
 
 ### Claude does not let me add another connector
 
