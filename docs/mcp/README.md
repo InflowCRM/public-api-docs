@@ -337,7 +337,7 @@ confirmation on for deletes, bulk tools, template writes and configuration tools
 | Configuration writes | **30 calls per 5 minutes** (a call refused before it wrote anything is not counted — unless the limit itself refused it) | create / update / delete of fields, list views, roles, squads, pipelines and stages, and every settings write (module names, company data, numbering, backfill, branding), together |
 | Failed authentication | 300 per 5 minutes per IP | counts `401` responses; once exceeded, every request from that IP gets `429` until the window resets |
 
-The request limit returns HTTP `429`; the per-tool limits return a tool error such as
+The request limit returns HTTP `429` with `Rate limit exceeded, retry in 42 s.`; the per-tool limits return a tool error such as
 `Too many bulk record writes, retry in 42 s.` A call refused by a limit writes nothing.
 
 ### Other limits
@@ -358,9 +358,10 @@ The request limit returns HTTP `429`; the per-tool limits return a tool error su
 | Filter conditions | 20 per `advancedFilter` |
 | Sort keys | 3 |
 | Free-text `query` | 2–100 characters, scans at most 500 candidates |
-| SMS template text | 1,000 characters |
+| SMS template text | 1,530 characters (the SMS provider's maximum; 670 with Polish letters or other special characters) |
 | Template name / description / e-mail subject | 200 / 2,000 / 500 characters |
-| Template HTML | 5 MB per part (body, header, footer) |
+| Template HTML | 5 MB per part (body, header, footer); all parts of one call must fit the 7 MB request, so save large parts in separate `update_document_template` calls |
+| Arguments of one call | 12,152 array elements and object keys in total |
 
 ---
 
