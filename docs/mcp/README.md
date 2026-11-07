@@ -73,7 +73,7 @@ https://mcp.inflowcrm.pl/.well-known/oauth-protected-resource
 How signing in works:
 
 1. In your AI app, add the connector with the URL `https://mcp.inflowcrm.pl` and click **Connect**.
-2. A page *"Connect an AI app"* asks for **your CRM address** — the one you log in at, e.g.
+2. A page titled *"Połączenie aplikacji AI"* (Connect an AI app) asks for **your CRM address** — the one you log in at, e.g.
    `firma.inflowstore.pl`.
 3. You are sent to your company's CRM. Log in if needed. The consent screen shows which app asks for access, the
    address it will return to, your account and your company.
@@ -90,8 +90,8 @@ renewed automatically for up to 30 days of inactivity).
 | Employee (regular CRM user with a role) | **Not yet** — coming soon, within the permissions of their own role |
 | Integration user | No — integration users connect with their API key |
 
-**For now MCP is available to company administrators only.** An employee who tries to connect sees *"This account cannot connect AI apps to the CRM.
-Contact your company administrator."* We will soon add an option that lets employees use MCP within the permissions of their own CRM role.
+**For now MCP is available to company administrators only.** An employee who tries to connect sees a message that the account cannot connect
+AI apps to the CRM and should contact the company administrator. We will soon add an option that lets employees use MCP within the permissions of their own CRM role.
 
 What a signed-in connection may do:
 

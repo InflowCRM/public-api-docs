@@ -36,26 +36,34 @@ Apps that support only SSE cannot connect.
 
 ## Signing in
 
-The consent screen follows your CRM's language, so its messages may appear in Polish rather than in the English quoted
-here.
+The sign-in pages can appear in Polish: the page asking for your CRM address is always in Polish, and the consent screen
+follows your CRM's language. Each message below is given in English, followed by the Polish text you may see.
 
 ### "CRM not found at this address, or MCP is not enabled for it."
+
+On screen: *Nie znaleziono CRM o tym adresie albo MCP nie jest w nim włączone.*
 
 Enter the address you use to log in to the CRM, e.g.
 `firma.inflowstore.pl`. If the address is right, [ask InflowCRM](../contact.md) to enable MCP for your company.
 
 ### "This account cannot connect AI apps to the CRM. Contact your company administrator."
 
+On screen: *To konto nie może łączyć aplikacji AI z CRM. Skontaktuj się z administratorem firmy.*
+
 For now MCP is available to company administrators only.
 We will soon add an option that lets employees use MCP within the permissions of their own CRM role.
 
 ### "This link has expired. Go back to the app and connect again."
+
+On screen: *Ten link wygasł. Wróć do aplikacji i połącz się jeszcze raz.*
 
 The sign-in link is valid for 10 minutes. Go back to your AI app and click **Connect** again.
 
 ### The consent screen warns about an unknown address
 
 > *This address does not belong to a known AI app (claude.ai, chatgpt.com). Allow only if you are the one connecting this app.*
+
+On screen: *Ten adres nie należy do znanych aplikacji AI (claude.ai, chatgpt.com). Zezwól tylko wtedy, gdy to Ty łączysz tę aplikację.*
 
 The address the sign-in returns to is not on our list of known apps. This is expected for Gemini, Perplexity and Grok.
 Check that you started the connection yourself and that the address shown belongs to your AI app, then allow it. If you
