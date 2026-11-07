@@ -11,10 +11,9 @@ Find what you see, then follow the fix. Setup steps for each app are in [Connect
 
 ### Gemini does not show "Custom apps"
 
-Open [gemini.google.com/customize/connectors?hl=en](https://gemini.google.com/customize/connectors?hl=en). Custom apps
-are visible only in English (`hl=en` in the address), and customers using Gemini in Polish had to switch, including on the
-free plan. If the option is still missing, check Google's other [requirements](clients.md#gemini-app): a personal Google
-account and Keep Activity on. Google also lists age 18+ and the US.
+Set Gemini to **English**: open [gemini.google.com/customize/connectors?hl=en](https://gemini.google.com/customize/connectors?hl=en).
+Custom apps are visible only in English. This works in Poland too, including on the free plan. If the option is still
+missing, check that you use a personal Google account with Keep Activity on.
 
 ### Claude does not let me add another connector
 
@@ -44,8 +43,8 @@ Apps that support only SSE cannot connect.
 
 ### "To konto nie może łączyć aplikacji AI z CRM. Skontaktuj się z administratorem firmy."
 
-*(This account cannot connect AI apps to the CRM.)* You are not a company administrator and employee sign-in is off.
-Ask your company administrator, who can ask InflowCRM to allow employees.
+*(This account cannot connect AI apps to the CRM.)* For now MCP is available to company administrators only.
+We will soon add an option that lets employees use MCP within the permissions of their own CRM role.
 
 ### "Ten link wygasł. Wróć do aplikacji i połącz się jeszcze raz."
 
@@ -98,23 +97,18 @@ limit is shared by everything using the same API key, so give each integration i
 
 ### Tools are missing
 
-- Tools your plan, the enabled features or your account do not allow are not listed. Employees never get the configuration tools.
+- Tools your plan, the enabled features or your account do not allow are not listed.
 - After InflowCRM enables a feature, **reconnect** the app or start a new chat. Claude Code: `/mcp`, then reconnect.
 - Check the connector is switched on for this chat, and that the tool is not switched off in your app's settings.
 
 ### The assistant says a field does not exist, or cannot see it
 
 Only fields with an **Api field name** can be read, filtered and written. Set one in the field settings in the CRM, then
-ask the assistant to read the fields again. For an employee, the field may also be hidden by their role.
+ask the assistant to read the fields again.
 
 ### `PERMISSION_DENIED` or `FORBIDDEN`
 
-The role of the signed-in user does not allow this. Ask your company administrator to change the role if it should be
-allowed. There is no way around it from the assistant.
-
-### An employee sees fewer records than a colleague
-
-Employees see what their role allows, as in the CRM. This is expected. Compare the two roles.
+The connected account may not do this. Ask your company administrator. There is no way around it from the assistant.
 
 ### The assistant keeps asking for confirmation, or a tool refuses without `confirm: true`
 

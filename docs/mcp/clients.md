@@ -11,8 +11,9 @@ The InflowCRM MCP server works with AI tools that can connect to a **remote MCP 
 | API key | `Authorization: Bearer YOUR_API_KEY` (or `x-api-key: YOUR_API_KEY`) |
 
 MCP must be enabled for your company first; for the API key route you also need an integration user's key — see
-[MCP Server → Quick start](README.md). Signing in works for company administrators, and for employees only when
-your company has asked InflowCRM to allow them ([details](README.md#who-can-sign-in)).
+[MCP Server → Quick start](README.md).
+
+> **For now MCP is available to company administrators only.** Employees cannot connect yet. We will soon add an option that lets employees use MCP within the permissions of their own CRM role.
 
 > Keep the key out of files you commit. Where a tool can read it from an environment variable, use
 > `INFLOWCRM_API_KEY`.
@@ -35,8 +36,8 @@ The Claude Desktop app and claude.ai share the same **custom connectors**, so yo
 work on every Claude plan; the **Free plan allows one**.
 
 1. Open **Customize → Connectors**, click **+ Add**, then **Add custom connector**.
-   - **Team / Enterprise:** an owner first adds the connector in **Organization settings → Connectors**. Each member
-     then finds it in **Customize → Connectors**, clicks **Connect** and signs in with their own CRM account.
+   - **Team / Enterprise:** an owner first adds the connector in **Organization settings → Connectors**. A company
+     administrator then finds it in **Customize → Connectors**, clicks **Connect** and signs in with their CRM account.
 2. Name it `InflowCRM`, enter the URL `https://mcp.inflowcrm.pl` and click **Continue**. Review the detected settings
    and click **Continue** again.
 3. Under **Authentication** choose **Sign in now**. Leave **OAuth client** as it is and **Request headers** empty,
@@ -154,13 +155,9 @@ Skill: paste the [skill text](skill.md#copy-and-paste) into the project's or cus
 
 ### Gemini app
 
-> **Use the English page:** [gemini.google.com/customize/connectors?hl=en](https://gemini.google.com/customize/connectors?hl=en).
-> Custom apps are visible only in English (`hl=en` in the address), so they do not appear while Gemini is set to another
-> language. InflowCRM customers using Gemini in Polish had to switch to English, including on the free plan.
-
-Google also lists these requirements: **aged 18+ in the US**, a **personal Google account** (not work or school) and
-**Keep Activity** on. If the option is still missing with English set, check these next, or use another tool from
-this page.
+> **Set Gemini to English.** Custom apps are visible only in English, so use
+> [gemini.google.com/customize/connectors?hl=en](https://gemini.google.com/customize/connectors?hl=en). This works in
+> Poland too, including on the free plan.
 
 1. On a computer, open [the English connectors page](https://gemini.google.com/customize/connectors?hl=en) (custom apps
    can only be connected on the web; the mobile app can use them afterwards).
@@ -232,19 +229,18 @@ plans a team admin may have to set up connectors first.
 
 ## Limit what each person can do
 
+**For now MCP is available to company administrators only**, so there is no separate access per employee yet.
+We will soon add an option that lets employees use MCP within the permissions of their own CRM role.
+
+Until then:
+
 | You want | Use | Who enforces it |
 |---|---|---|
-| A colleague who cannot create, change or delete records | Employee sign-in and a CRM role with only the right to view the modules they need | **InflowCRM** |
-| A colleague who adds notes and moves deals, but cannot delete | Employee sign-in and a role with create and modify rights, without delete, on those modules | **InflowCRM** |
-| Nobody but you changes fields, list views or roles | Employee sign-in. Employees never get the configuration tools | **InflowCRM** |
 | A prompt before every change | Approval settings in your AI app | Your AI app only |
 | A read-only script or report | Tool filter in the client, e.g. the [Claude Code deny list](#claude-code) or **Tools to include** in n8n | That client only. **The key itself keeps full rights** |
 
-- Employee sign-in follows the person's role on every call, so a call the role does not allow fails on our server. Check the
-  rights for SMS, e-mail and document templates in the role as well.
-- Employee sign-in is enabled for the whole company, not per role or person. [Contact InflowCRM](../contact.md) to enable it.
-- An **API key has full rights in your company's data**. Do not rely on a role to limit a key.
-- To cut off one person, block their user in the CRM. This also ends their CRM access.
+- A company administrator and an **API key have full rights in your company's data**. Do not rely on a role to limit a key.
+- To cut off access, block the user in the CRM. This also ends their CRM access.
 
 ---
 
