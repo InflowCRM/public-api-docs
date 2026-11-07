@@ -164,7 +164,7 @@ Tool results come back as JSON text in `result.content[0].text`; failures set `r
 
 ## 🧰 What the assistant can do
 
-Up to **37 tools** (depending on your plan and rights), grouped by capability (full reference:
+Up to **38 tools** (depending on your plan and rights), grouped by capability (full reference:
 **[MCP Tools](tools.md)**):
 
 | Capability | Tools |
@@ -178,6 +178,7 @@ Up to **37 tools** (depending on your plan and rights), grouped by capability (f
 | Documents | `list_document_templates`, `generate_document` (PDF, optionally saved to the record) |
 | Templates | `get_template_tags`; SMS: `list_sms_templates`, `get_sms_template`, `create_sms_template`, `update_sms_template`, `delete_sms_template`; e-mail: `list_email_templates`, `get_email_template`, `create_email_template`, `update_email_template`, `delete_email_template`; documents: `get_document_template`, `create_document_template`, `update_document_template`, `delete_document_template` |
 | Lookup | `lookup_company_gus` (Polish GUS registry by NIP / REGON / KRS) |
+| Problem reports | `report_problem` (the assistant reports a problem to the InflowCRM team) |
 
 The template tools **prepare templates** — they do not send SMS or e-mail. Messages are sent by the CRM itself
 (manually or by the template's automatic sending), as before.
@@ -185,7 +186,7 @@ The template tools **prepare templates** — they do not send SMS or e-mail. Mes
 ### 🛠️ Configuration tools
 
 Companies that want the assistant to help **configure the CRM** can ask InflowCRM to enable the configuration tools.
-They add **13 tools** (up to **50** in total):
+They add **13 tools** (up to **51** in total):
 
 | Capability | Tools |
 |---|---|
@@ -242,7 +243,7 @@ below explains. Every tool belongs to a scope:
 
 | Scope | Tools |
 |---|---|
-| *(always)* | `list_modules` |
+| *(always)* | `list_modules`, `report_problem` |
 | `records:read` | `get_module_fields`, `get_sample_record`, `search_records`, `find_record`, `count_records`, `get_record`, `get_records_by_ids`, `get_pipeline_summary` |
 | `records:write` | `create_record`, `create_records`, `update_record`, `update_records` |
 | `records:delete` | `delete_record` |
