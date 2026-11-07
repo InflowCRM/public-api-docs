@@ -16,7 +16,7 @@ Source: [`skills/inflowcrm-mcp`](https://github.com/InflowCRM/public-api-docs/tr
 
 - **Discovery first** — `list_modules` → `get_module_fields`, and use only Api field names as keys.
 - **Choosing the right read** — free-text `query` for names/e-mails/NIP, `filters` / `advancedFilter` for exact
-  criteria, `count_records` and `get_pipeline_summary` instead of paging through records.
+  criteria, `count_records`, `aggregate_records` and `get_pipeline_summary` instead of paging through records.
 - **Data conventions** — date and DateRange filters, pick list values, relations by id, `expandRelations`.
 - **Pipelines** — pipeline id and stage *name* travel together; stages are matched by name, not position.
 - **Safe writes** — duplicate check before create, GUS lookup for new Polish companies, explicit user confirmation

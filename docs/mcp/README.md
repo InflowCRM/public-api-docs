@@ -164,13 +164,13 @@ Tool results come back as JSON text in `result.content[0].text`; failures set `r
 
 ## 🧰 What the assistant can do
 
-Up to **37 tools** (depending on your plan and rights), grouped by capability (full reference:
+Up to **38 tools** (depending on your plan and rights), grouped by capability (full reference:
 **[MCP Tools](tools.md)**):
 
 | Capability | Tools |
 |---|---|
 | Discover | `list_modules`, `get_module_fields`, `get_sample_record` |
-| Read records | `search_records` (free-text `query`, filters, sort, paging), `find_record`, `count_records`, `get_record`, `get_records_by_ids` |
+| Read records | `search_records` (free-text `query`, filters, sort, paging), `find_record`, `count_records`, `aggregate_records`, `get_record`, `get_records_by_ids` |
 | Write records | `create_record`, `update_record`, `create_records` / `update_records` (bulk, up to 50), `delete_record` (to trash) |
 | Pipelines | `get_pipelines`, `get_pipeline_summary` (records and value per stage) |
 | Files | `list_record_files`, `download_file`, upload via `create_record` / `update_record` |
@@ -185,7 +185,7 @@ The template tools **prepare templates** — they do not send SMS or e-mail. Mes
 ### 🛠️ Configuration tools
 
 Companies that want the assistant to help **configure the CRM** can ask InflowCRM to enable the configuration tools.
-They add **13 tools** (up to **50** in total):
+They add **13 tools** (up to **51** in total):
 
 | Capability | Tools |
 |---|---|
@@ -243,7 +243,7 @@ below explains. Every tool belongs to a scope:
 | Scope | Tools |
 |---|---|
 | *(always)* | `list_modules` |
-| `records:read` | `get_module_fields`, `get_sample_record`, `search_records`, `find_record`, `count_records`, `get_record`, `get_records_by_ids`, `get_pipeline_summary` |
+| `records:read` | `get_module_fields`, `get_sample_record`, `search_records`, `find_record`, `count_records`, `aggregate_records`, `get_record`, `get_records_by_ids`, `get_pipeline_summary` |
 | `records:write` | `create_record`, `create_records`, `update_record`, `update_records` |
 | `records:delete` | `delete_record` |
 | `files:read` | `list_record_files`, `download_file` |

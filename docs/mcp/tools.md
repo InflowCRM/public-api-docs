@@ -69,6 +69,59 @@ Number of records matching optional filters. Cheaper than `search_records` when 
 
 - **Input:** `{ module, filters?, advancedFilter? }` → `{ count }`
 
+### `aggregate_records`
+Record counts and `sum`/`avg`/`min`/`max` of number fields over a whole module, optionally grouped. One call instead
+of paging through `search_records`, so prefer it whenever the answer is a number or a breakdown and not the records.
+Filters work as in `count_records`, and the same filters give the same total.
+
+- **Input:** `{ module, metrics, groupBy?, filters?, advancedFilter?, limit? }`
+  - `metrics`: 1-10 of `{ op: "count" }` or `{ op: "sum"|"avg"|"min"|"max", field }`, where `field` is a Number or
+    Rating field.
+  - `groupBy`: up to 2 of `{ field, interval? }`. Single-value fields, relations, and `owner`, `createdBy`,
+    `modifiedBy`, `createdTime`, `modifiedTime`. Date fields require `interval`: `day`, `week`, `month`, `quarter` or
+    `year`. Multi-value fields are refused.
+  - `limit`: groups returned, default 50, max 200.
+- **Output:** `{ module, timezone, groups: [{ key, count, metrics? | byCurrency? }], truncated, limit }`
+
+```json
+{
+  "module": "potential",
+  "timezone": "Europe/Warsaw",
+  "groups": [
+    {
+      "key": { "owner": { "id": "665f1c2ab1d4e8a9c0f12345", "label": "Anna Nowak" }, "createdTime": "2026-07" },
+      "count": 12,
+      "byCurrency": [
+        { "currency": "PLN", "count": 10, "sum_opportunityValue": 84000 },
+        { "currency": null, "count": 2, "sum_opportunityValue": 1500 }
+      ]
+    }
+  ],
+  "truncated": false,
+  "limit": 50
+}
+```
+
+How to read the answer:
+
+- **Currencies never mix.** A metric on the amount of a potential or order comes back per currency in `byCurrency`.
+  An amount without a currency sits under `currency: null`. A caller who cannot read the currency field cannot use
+  money metrics on the amount.
+- **Empty values form a group.** A missing or empty value lands in a group with a `null` key, so group counts add up
+  to the total.
+- **Non-numeric values:** a record without a numeric value counts in `count` and does not move the metrics.
+- **Date keys** use Europe/Warsaw time: `2026-07-31` (day), the Monday of the week (week), `2026-07` (month),
+  `2026-Q3` (quarter), `2026` (year).
+- **Order and `truncated`:** with a date group the order follows the `groupBy` keys, oldest first within a key, so
+  `truncated: true` can cut whole owners, not only newer months. Other groups sort biggest first. Without `groupBy` the
+  answer is always one group.
+- **Roles:** a team member can aggregate on the fields their role lets them read. A field hidden from them is refused
+  like an unknown field in `metrics`, `groupBy` and filters, and so is a relation stored under the same path as a hidden
+  field. A related record they cannot see, or one whose label field their role hides, comes back with `label: null`.
+  Records shared with them that have no owner are not counted, the same as in `count_records`.
+- **Limits:** 30 calls per minute per user. A query running over 10 seconds fails with a message asking to narrow
+  the filters or groups.
+
 ### `get_record`
 - **Input:** `{ module, recordId, expandRelations? }`
 
