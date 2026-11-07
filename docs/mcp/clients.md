@@ -42,8 +42,8 @@ work on every Claude plan; the **Free plan allows one**.
    and click **Continue** again.
 3. Under **Authentication** choose **Sign in now**. Leave **OAuth client** as it is and **Request headers** empty,
    then click **Add**.
-4. On the page *"Połącz aplikację AI z InflowCRM"* enter **your CRM address** — the one you log in at, e.g.
-   `firma.inflowstore.pl` — then **Dalej**.
+4. On the page *"Connect an AI app"* enter **your CRM address** — the one you log in at, e.g.
+   `firma.inflowstore.pl` — then **Next**.
 5. Log in to your CRM if asked. The consent screen shows the app, your account and your company — check them and
    **allow** access.
 6. In a chat, turn the connector on with **+ → Connectors** and ask e.g. *"How many customers do we have?"*.
@@ -163,7 +163,7 @@ Skill: paste the [skill text](skill.md#copy-and-paste) into the project's or cus
    can only be connected on the web; the mobile app can use them afterwards).
 2. Under **Custom apps**, choose **Add a custom app**.
 3. Enter `https://mcp.inflowcrm.pl` and click **Next**. Leave the advanced fields empty — Gemini registers itself.
-4. On the page *"Połącz aplikację AI z InflowCRM"* enter your CRM address, log in and allow access. The consent
+4. On the page *"Connect an AI app"* enter your CRM address, log in and allow access. The consent
    screen warns that the address is not a known AI app; [this is expected](troubleshooting.md#the-consent-screen-warns-about-an-unknown-address)
    when the address belongs to Google and you started the connection yourself.
 5. In a prompt, type `@` and pick the app.
