@@ -1,7 +1,7 @@
 # MCP Server (AI assistants)
 
 InflowCRM ships a [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server. It lets an AI assistant —
-claude.ai, ChatGPT, Gemini, Claude Desktop, Claude Code, Cursor, VS Code Copilot, your own agent — read and update the CRM
+Claude Desktop, claude.ai, Claude Code, ChatGPT, Gemini, Perplexity, Grok, Cursor, VS Code Copilot, your own agent — read and update the CRM
 data of **one company** in plain language: find customers, count open deals, move a potential to the next stage,
 attach a file, generate a PDF offer, prepare SMS / e-mail / document templates, look up a Polish company in GUS.
 
@@ -28,7 +28,7 @@ There are two ways to connect. Both use the same address and the same tools.
 1. **Ask InflowCRM to enable MCP** for your company.
 2. **Connect:**
    - **OAuth:** add `https://mcp.inflowcrm.pl` as a custom connector / remote MCP server in your AI app and sign in
-     — step by step in [Connect your AI tool](clients.md#claudeai-and-claude-desktop-connector).
+     — step by step in [Connect your AI tool](clients.md#claude-desktop-and-claudeai).
    - **API key:** a company administrator creates a user with the **integration user** option and copies its
      **API key** from the user's details (the same key the REST API and the [n8n node](../n8n-node.md) use). Send
      it in the `Authorization` header.
@@ -98,8 +98,8 @@ disconnects employees' apps immediately.
 What a signed-in connection may do:
 
 - **The user's own rights.** Which records a signed-in user sees and changes, and which field values, follow their
-  role, as in the CRM. There are no separate OAuth scopes and no "read only" mode — to limit an assistant further,
-  use your AI app's per-tool settings (see *Confirmations and restricting what the assistant may do* below).
+  role, as in the CRM. To limit a person, limit their role. There are no separate OAuth scopes or a "read only" switch
+  at sign-in — see [Limit what each person can do](clients.md#limit-what-each-person-can-do).
 - An employee never gets the configuration tools (fields, list views, roles), even when the company has them.
 - Blocking or deleting the user in the CRM ends the access at once. Removing the connector in the AI app removes
   its sign-in from the app.
@@ -131,37 +131,11 @@ apiKey: YOUR_API_KEY
 
 ## 🔌 Connecting a client
 
-### claude.ai, Claude Desktop
+### Claude Desktop, claude.ai, Claude Code, ChatGPT, Gemini, Perplexity, Grok, Codex, Cursor, VS Code, n8n
 
-Add `https://mcp.inflowcrm.pl` as a custom connector and sign in — see
-**[Connect your AI tool](clients.md#claudeai-and-claude-desktop-connector)**.
-
-### Claude Code
-
-With an API key:
-
-```bash
-claude mcp add --transport http inflowcrm https://mcp.inflowcrm.pl \
-  --header "Authorization: Bearer YOUR_API_KEY"
-```
-
-Or sign in with your CRM account: add the server without the header, then run `/mcp`, pick `inflowcrm` and choose
-**Authenticate**.
-
-```bash
-claude mcp add --transport http inflowcrm https://mcp.inflowcrm.pl
-```
-
-Check with `claude mcp list`, then ask e.g. *"How many open potentials do we have per stage?"*.
-Add `--scope user` to make the server available in every project.
-
-> Claude Code reads the tool list when it connects. After InflowCRM adds tools or enables a feature for your
-> company, run `/mcp` and reconnect.
-
-### ChatGPT, Gemini, Codex, Cursor, VS Code, n8n, Python, OpenAI Agents SDK, LangChain
-
-Step-by-step configs for each tool — plus a **universal setup prompt** that lets any AI agent configure the
-connection and install the skill by itself — are on **[Connect your AI tool](clients.md)**.
+Step-by-step setup for each tool — plus a **universal setup prompt** that lets an AI agent configure the
+connection and install the skill by itself — is on **[Connect your AI tool](clients.md)**. If something fails, see
+**[Troubleshooting](troubleshooting.md)**.
 
 ### Your own agent / any MCP SDK
 
@@ -255,27 +229,16 @@ The assistant is told to set `confirm: true` only after **you** agreed in the co
 whole batch (listing every item), not once per item. `confirm` is set by the model, though — the confirmation that
 cannot be bypassed is the one in your AI app.
 
-> **Recommended:** in claude.ai / ChatGPT / Claude Desktop set the InflowCRM **write and delete tools to "needs
-> approval"** (ask every time) in the connector's tool settings. Then the app asks *you* before each change, whatever
-> the model was told by text in the data.
+> **Recommended:** keep your AI app asking *you* before each change, and do not choose "always allow" for tools that
+> write or delete. Then the app asks you whatever the model was told by text in the data. Where to set this differs per
+> app; see [Connect your AI tool](clients.md).
 
-In Claude Code you can deny tools outright in `.claude/settings.json`:
-
-```json
-{
-  "permissions": {
-    "deny": [
-      "mcp__inflowcrm__delete_record",
-      "mcp__inflowcrm__create_records",
-      "mcp__inflowcrm__update_records"
-    ]
-  }
-}
-```
+In Claude Code you can deny tools outright in `.claude/settings.json`: copy the full [read-only list](clients.md#claude-code).
 
 ### Scopes
 
-Every tool belongs to a scope:
+Scopes are how the server groups tools. **You cannot choose them yet**: every API key receives all of them, as the note
+below explains. Every tool belongs to a scope:
 
 | Scope | Tools |
 |---|---|
@@ -386,6 +349,7 @@ item failed.
 ## 📚 See also
 
 - [Connect your AI tool](clients.md)
+- [Troubleshooting](troubleshooting.md)
 - [MCP Tools reference](tools.md)
 - [Agent skill for InflowCRM](skill.md)
 - [REST API — Modules & Fields](../rest-api/modules.md)
