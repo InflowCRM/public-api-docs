@@ -1,14 +1,14 @@
 # Connect your AI tool
 
-The InflowCRM MCP server works with any AI tool that supports **remote MCP servers over Streamable HTTP**, either
-by **signing in with your CRM account (OAuth)** or with **an API key in a header**. Everything you need:
+The InflowCRM MCP server works with AI tools that can connect to a **remote MCP server**. You connect either by
+**signing in with your CRM account** or, in developer tools, with **an API key**.
 
 | Setting | Value |
 |---|---|
 | URL | `https://mcp.inflowcrm.pl` |
 | Transport | Streamable HTTP (sometimes called "HTTP" or "streamable-http"; **not** SSE) |
-| Authentication | OAuth — sign in on your company's CRM page (no key needed), **or** |
-| Header | `Authorization: Bearer YOUR_API_KEY` (or `x-api-key: YOUR_API_KEY`) |
+| Sign-in | OAuth: sign in on your company's CRM page, no key needed |
+| API key | `Authorization: Bearer YOUR_API_KEY` (or `x-api-key: YOUR_API_KEY`) |
 
 MCP must be enabled for your company first; for the API key route you also need an integration user's key — see
 [MCP Server → Quick start](README.md). Signing in works for company administrators, and for employees only when
@@ -17,46 +17,114 @@ your company has asked InflowCRM to allow them ([details](README.md#who-can-sign
 > Keep the key out of files you commit. Where a tool can read it from an environment variable, use
 > `INFLOWCRM_API_KEY`.
 
-**Jump to:** [claude.ai and Claude Desktop](#claudeai-and-claude-desktop-connector) · [ChatGPT](#chatgpt) · [Gemini](#gemini) ·
-[Universal setup prompt](#universal-setup-prompt) · [Claude Code](#claude-code) ·
-[Claude Desktop with an API key](#claude-desktop-with-an-api-key) · [OpenAI Codex CLI](#openai-codex-cli) ·
-[Cursor](#cursor) · [VS Code](#vs-code-github-copilot) · [n8n](#n8n) ·
-[Python](#python-mcp-sdk) · [OpenAI Agents SDK](#openai-agents-sdk) · [LangChain / LangGraph](#langchain-langgraph)
+**Not a developer?** Use [Claude](#claude-desktop-and-claudeai), [ChatGPT](#chatgpt), [Gemini](#gemini),
+[Perplexity](#perplexity) or [Grok](#grok) and sign in with your CRM account. You need no terminal and no key.
+
+**Something not working?** See [Troubleshooting](troubleshooting.md).
+
+**Jump to:** [Claude Desktop and claude.ai](#claude-desktop-and-claudeai) · [Claude Code](#claude-code) ·
+[ChatGPT](#chatgpt) · [Gemini](#gemini) · [Perplexity](#perplexity) · [Grok](#grok) ·
+[Limit what each person can do](#limit-what-each-person-can-do) · [Universal setup prompt](#universal-setup-prompt) ·
+[OpenAI Codex CLI](#openai-codex-cli) · [Cursor](#cursor) · [VS Code](#vs-code-github-copilot) · [n8n](#n8n)
 
 ---
 
-## claude.ai and Claude Desktop (connector)
+## Claude Desktop and claude.ai
 
-claude.ai and the Claude Desktop app share the same **custom connectors**. Connecting signs you in with your CRM
-account — no API key.
+The Claude Desktop app and claude.ai share the same **custom connectors**, so you add InflowCRM once. Custom connectors
+work on every Claude plan; the **Free plan allows one**.
 
-1. Open **Settings → Connectors** and choose **Add custom connector**. (In a Team / Enterprise organization an owner
-   may have to add the connector for the organization first.)
-2. Name it `InflowCRM` and enter the URL `https://mcp.inflowcrm.pl`. Leave the advanced OAuth fields empty — the app
-   registers itself.
-3. Click **Connect**. A page *"Połącz aplikację AI z InflowCRM"* asks for **your CRM address** — the one you log in
-   at, e.g. `firma.inflowstore.pl` — then **Dalej**.
-4. Log in to your CRM if asked. The consent screen shows the app, your account and your company — check them and
+1. Open **Customize → Connectors**, click **+ Add**, then **Add custom connector**.
+   - **Team / Enterprise:** an owner first adds the connector in **Organization settings → Connectors**. Each member
+     then finds it in **Customize → Connectors**, clicks **Connect** and signs in with their own CRM account.
+2. Name it `InflowCRM`, enter the URL `https://mcp.inflowcrm.pl` and click **Continue**. Review the detected settings
+   and click **Continue** again.
+3. Under **Authentication** choose **Sign in now**. Leave **OAuth client** as it is and **Request headers** empty,
+   then click **Add**.
+4. On the page *"Połącz aplikację AI z InflowCRM"* enter **your CRM address** — the one you log in at, e.g.
+   `firma.inflowstore.pl` — then **Dalej**.
+5. Log in to your CRM if asked. The consent screen shows the app, your account and your company — check them and
    **allow** access.
-5. Back in Claude, enable the InflowCRM connector in a chat's tools menu and ask e.g. *"How many customers do we
-   have?"*.
-
-**Recommended:** in the connector's tool settings set the tools that create, change or delete data to **needs
-approval** (ask every time). This is the confirmation that cannot be bypassed by text inside CRM data. See
-[Confirmations](README.md#confirmations) for the tools that also require `confirm: true`.
+6. In a chat, turn the connector on with **+ → Connectors** and ask e.g. *"How many customers do we have?"*.
 
 The assistant works with **your rights** in the CRM. When InflowCRM enables more tools for your company, disconnect
 and connect again (or start a new chat) to see them.
 
-Skill: if your plan lets you add skills (Settings → Capabilities), upload a ZIP of the
+**Stay in control of changes:**
+
+- When Claude asks to use a tool that changes data, read what it wants to send. Do not choose **Allow always** for
+  tools that create, change or delete data.
+- In the **Search and tools** menu you can switch off individual tools, for example every tool that writes.
+- During **Research**, Claude can use connector tools without asking again, so switch off write tools first.
+
+See also [Confirmations](README.md#confirmations) for the tools that also require `confirm: true`.
+
+**Skill (optional):** if your plan lets you add skills, upload a ZIP of the
 [`skills/inflowcrm-mcp`](https://github.com/InflowCRM/public-api-docs/tree/main/skills/inflowcrm-mcp) folder;
 otherwise paste the [skill text](skill.md#copy-and-paste) into a Project's instructions.
 
-| Message | What to do |
-|---|---|
-| *Nie znaleziono CRM o tym adresie albo MCP nie jest w nim włączone.* | Check the CRM address; ask InflowCRM to enable MCP for your company |
-| *To konto nie może łączyć aplikacji AI z CRM. Skontaktuj się z administratorem firmy.* | Your account may not connect AI apps — ask your company administrator (employees need the feature enabled for the company) |
-| *Ten link wygasł. Wróć do aplikacji i połącz się jeszcze raz.* | The sign-in link is valid for 10 minutes — click Connect again |
+**API key instead of signing in:** the connector form has a **Request headers** field, where you can add
+`Authorization: Bearer YOUR_API_KEY`. Use this only for a dedicated integration: everyone using that connector then
+acts as the integration user, with full rights and no role limits.
+
+---
+
+## Claude Code
+
+Sign in with your CRM account (recommended for one person):
+
+```bash
+claude mcp add --transport http --scope user inflowcrm https://mcp.inflowcrm.pl
+```
+
+Then run `/mcp`, select `inflowcrm` and choose **Authenticate**. The browser opens the sign-in page. Without
+`--scope user` the server is added for the current project only.
+
+On a machine without a browser (for example over SSH), run `claude mcp login inflowcrm --no-browser`, open the printed
+address on your own computer, and paste the callback address back when asked.
+
+**With an API key,** keep the key out of the repository: put a reference in the project's `.mcp.json` and set
+`INFLOWCRM_API_KEY` in your environment.
+
+```json
+{
+  "mcpServers": {
+    "inflowcrm": {
+      "type": "http",
+      "url": "https://mcp.inflowcrm.pl",
+      "headers": { "Authorization": "Bearer ${INFLOWCRM_API_KEY}" }
+    }
+  }
+}
+```
+
+**Check the connection** with `claude mcp list` (`Connected`, `Needs authentication` or `Failed to connect`), or with
+`/mcp` inside Claude Code. Claude Code reads the tool list when it connects, so after InflowCRM enables more tools,
+run `/mcp` and reconnect.
+
+**Read-only assistant:** add this to `.claude/settings.json`. It blocks these tools in this Claude Code setup only;
+it does not limit the key itself. Review the list when InflowCRM adds tools, because new tools are not blocked.
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "mcp__inflowcrm__create_record", "mcp__inflowcrm__create_records",
+      "mcp__inflowcrm__update_record", "mcp__inflowcrm__update_records",
+      "mcp__inflowcrm__delete_record", "mcp__inflowcrm__generate_document",
+      "mcp__inflowcrm__create_sms_template", "mcp__inflowcrm__update_sms_template", "mcp__inflowcrm__delete_sms_template",
+      "mcp__inflowcrm__create_email_template", "mcp__inflowcrm__update_email_template", "mcp__inflowcrm__delete_email_template",
+      "mcp__inflowcrm__create_document_template", "mcp__inflowcrm__update_document_template", "mcp__inflowcrm__delete_document_template",
+      "mcp__inflowcrm__create_field", "mcp__inflowcrm__update_field", "mcp__inflowcrm__delete_field",
+      "mcp__inflowcrm__create_list_view", "mcp__inflowcrm__update_list_view", "mcp__inflowcrm__delete_list_view",
+      "mcp__inflowcrm__create_role", "mcp__inflowcrm__update_role", "mcp__inflowcrm__delete_role"
+    ]
+  }
+}
+```
+
+**Skill (optional):** `/plugin marketplace add InflowCRM/public-api-docs`, then `/plugin install inflowcrm@inflowcrm`
+([details](skill.md)).
 
 ---
 
@@ -71,7 +139,7 @@ workspace admin if you do not see the option.
 3. Choose **OAuth** as the authentication and leave any client credentials empty — ChatGPT registers itself.
 4. Review the risk warning, choose **I understand and want to continue**, then **Create as a plugin**.
 5. Find the plugin under your personal plugins (or the workspace where you created it) and install it. Sign in exactly
-   as in steps 3–4 for [claude.ai](#claudeai-and-claude-desktop-connector): your CRM address, log in, allow.
+   as in steps 4–5 for [Claude](#claude-desktop-and-claudeai): your CRM address, log in, allow.
 6. In a chat, type `@` and pick the plugin, then ask e.g. *"How many customers do we have?"*.
 
 ChatGPT asks for confirmation before write actions. Review what the tool is about to send, and keep the "remember"
@@ -83,6 +151,28 @@ Skill: paste the [skill text](skill.md#copy-and-paste) into the project's or cus
 ---
 
 ## Gemini
+
+### Gemini app
+
+> **Use the English page:** [gemini.google.com/customize/connectors?hl=en](https://gemini.google.com/customize/connectors?hl=en).
+> Custom apps are visible only in English (`hl=en` in the address), so they do not appear while Gemini is set to another
+> language. InflowCRM customers using Gemini in Polish had to switch to English, including on the free plan.
+
+Google also lists these requirements: **aged 18+ in the US**, a **personal Google account** (not work or school) and
+**Keep Activity** on. If the option is still missing with English set, check these next, or use another tool from
+this page.
+
+1. On a computer, open [the English connectors page](https://gemini.google.com/customize/connectors?hl=en) (custom apps
+   can only be connected on the web; the mobile app can use them afterwards).
+2. Under **Custom apps**, choose **Add a custom app**.
+3. Enter `https://mcp.inflowcrm.pl` and click **Next**. Leave the advanced fields empty — Gemini registers itself.
+4. On the page *"Połącz aplikację AI z InflowCRM"* enter your CRM address, log in and allow access. The consent
+   screen warns that the address is not a known AI app; [this is expected](troubleshooting.md#the-consent-screen-warns-about-an-unknown-address)
+   when the address belongs to Google and you started the connection yourself.
+5. In a prompt, type `@` and pick the app.
+
+Gemini asks for confirmation before write actions. Skill: paste the [skill text](skill.md#copy-and-paste) into your
+prompt or a Gem's instructions.
 
 ### Gemini CLI
 
@@ -103,26 +193,58 @@ Check with `gemini mcp list`, or with `/mcp` inside Gemini CLI — before you si
 Do not add `--trust`: it switches off the confirmations for every tool. Skill: add the
 [skill text](skill.md#copy-and-paste) to `~/.gemini/GEMINI.md`.
 
-### Gemini app
-
-Google currently offers custom apps only in **English**, to users **aged 18+ in the US**, signed in with a **personal
-Google account** (not work or school), and with **Keep Activity** on. If that rules you out — for example you are in
-Poland — use Gemini CLI, or another tool from this page.
-
-1. Go to [gemini.google.com](https://gemini.google.com) on a computer (custom apps can only be connected on the web;
-   the mobile app can use them afterwards).
-2. Open **Settings → Connected Apps** and, under **Custom apps**, choose **Add a custom app**.
-3. Enter `https://mcp.inflowcrm.pl` and click **Next**. Leave the advanced fields empty — Gemini registers itself.
-4. Sign in as in steps 3–4 for [claude.ai](#claudeai-and-claude-desktop-connector): your CRM address, log in, allow.
-5. In a prompt, type `@` and pick the app.
-
-Gemini asks for confirmation before write actions. Skill: paste the [skill text](skill.md#copy-and-paste) into your
-prompt or a Gem's instructions.
-
 ### Gemini Enterprise
 
 The custom MCP connector in Gemini Enterprise needs an OAuth client registered in advance, which is not covered by the
 sign-in flow above. [Contact us](../contact.md) if your company wants to connect it.
+
+---
+
+## Perplexity
+
+Not yet tested by InflowCRM. Steps follow
+[Perplexity's guide](https://www.perplexity.ai/help-center/en/articles/13915507-adding-custom-remote-connectors).
+Custom connectors need a paid plan (Pro, Max or Enterprise). In an organization, an administrator must turn on
+**Allow members to add custom connectors** or add the connector for everyone.
+
+1. Open **Plugins** in the sidebar (or **Customize → Connectors**), then **Add custom → Add MCP connector** and choose **Remote**.
+2. Name it `InflowCRM` and enter the URL `https://mcp.inflowcrm.pl`.
+3. Under **Advanced**, set **Authentication** to **OAuth** and **Transport** to **Streamable HTTP**. Leave the client
+   credentials empty.
+4. Tick the acknowledgement, click **Add**, then click the connector card to sign in: your CRM address, log in, allow.
+   The consent screen [warns about an unknown address](troubleshooting.md#the-consent-screen-warns-about-an-unknown-address).
+
+Perplexity's form has no field for custom request headers, so use signing in rather than an API key.
+
+---
+
+## Grok
+
+Not yet tested by InflowCRM. Steps follow [xAI's guide](https://docs.x.ai/grok/connectors). On Business and Enterprise
+plans a team admin may have to set up connectors first.
+
+1. Go to [grok.com/connectors](https://grok.com/connectors), click **New Connector**, then **Custom**.
+2. Enter the URL `https://mcp.inflowcrm.pl`.
+3. Sign in when asked: your CRM address, log in, allow. The consent screen
+   [warns about an unknown address](troubleshooting.md#the-consent-screen-warns-about-an-unknown-address).
+
+---
+
+## Limit what each person can do
+
+| You want | Use | Who enforces it |
+|---|---|---|
+| A colleague who cannot create, change or delete records | Employee sign-in and a CRM role with only the right to view the modules they need | **InflowCRM** |
+| A colleague who adds notes and moves deals, but cannot delete | Employee sign-in and a role with create and modify rights, without delete, on those modules | **InflowCRM** |
+| Nobody but you changes fields, list views or roles | Employee sign-in. Employees never get the configuration tools | **InflowCRM** |
+| A prompt before every change | Approval settings in your AI app | Your AI app only |
+| A read-only script or report | Tool filter in the client, e.g. the [Claude Code deny list](#claude-code) or **Tools to include** in n8n | That client only. **The key itself keeps full rights** |
+
+- Employee sign-in follows the person's role on every call, so a call the role does not allow fails on our server. Check the
+  rights for SMS, e-mail and document templates in the role as well.
+- Employee sign-in is enabled for the whole company, not per role or person. [Contact InflowCRM](../contact.md) to enable it.
+- An **API key has full rights in your company's data**. Do not rely on a role to limit a key.
+- To cut off one person, block their user in the CRM. This also ends their CRM access.
 
 ---
 
@@ -166,63 +288,6 @@ Steps:
    and show me the module names. Do not create, change or delete any CRM data during setup.
 6. Report what you changed (files, commands) and how to undo it.
 ```
-
----
-
-## Claude Code
-
-```bash
-claude mcp add --transport http --scope user inflowcrm https://mcp.inflowcrm.pl \
-  --header "Authorization: Bearer YOUR_API_KEY"
-```
-
-Or sign in with your CRM account instead of a key: add the server without `--header`, run `/mcp`, select
-`inflowcrm` and choose **Authenticate** — the browser opens the sign-in page.
-
-```bash
-claude mcp add --transport http --scope user inflowcrm https://mcp.inflowcrm.pl
-```
-
-Skill: `/plugin marketplace add InflowCRM/public-api-docs` then `/plugin install inflowcrm@inflowcrm`
-([details](skill.md)). Check the connection with `/mcp`.
-
----
-
-## Claude Desktop with an API key
-
-The easiest way is the [connector with sign-in](#claudeai-and-claude-desktop-connector). Connectors cannot send an
-API-key header, so to connect Claude Desktop **with an integration user's API key** use its local configuration
-with the [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) bridge (requires [Node.js](https://nodejs.org) 18+):
-
-1. **Settings → Developer → Edit Config** opens `claude_desktop_config.json`.
-2. Add the server:
-
-```json
-{
-  "mcpServers": {
-    "inflowcrm": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "https://mcp.inflowcrm.pl",
-        "--header",
-        "Authorization:${INFLOWCRM_AUTH}"
-      ],
-      "env": {
-        "INFLOWCRM_AUTH": "Bearer YOUR_API_KEY"
-      }
-    }
-  }
-}
-```
-
-3. Restart Claude Desktop. The InflowCRM tools appear in the chat's tools menu.
-
-The header is passed through `env` because some systems mangle spaces in arguments. Skill: if your plan lets you add
-skills (Settings → Capabilities), upload a ZIP of the
-[`skills/inflowcrm-mcp`](https://github.com/InflowCRM/public-api-docs/tree/main/skills/inflowcrm-mcp) folder;
-otherwise paste the [skill text](skill.md#copy-and-paste) into a Project's instructions.
 
 ---
 
@@ -298,80 +363,6 @@ Use the tools in Copilot Chat's **Agent** mode. Skill: add the [skill text](skil
 - **Tools to include:** pick the tools the workflow needs (e.g. only read tools)
 
 For classic, deterministic workflows the [InflowCRM n8n node](../n8n-node.md) (REST API) is usually the better fit.
-
----
-
-## Python (MCP SDK)
-
-Tested with the official `mcp` package 2.x:
-
-```python
-import asyncio, os
-from mcp import ClientSession
-from mcp.client.streamable_http import create_mcp_http_client, streamable_http_client
-
-async def main():
-    http = create_mcp_http_client(headers={"Authorization": f"Bearer {os.environ['INFLOWCRM_API_KEY']}"})
-    async with http, streamable_http_client("https://mcp.inflowcrm.pl", http_client=http) as streams:
-        async with ClientSession(streams[0], streams[1]) as session:
-            await session.initialize()
-            tools = await session.list_tools()
-            print([t.name for t in tools.tools])
-            result = await session.call_tool("count_records", {"module": "customer"})
-            print(result.content[0].text)
-
-asyncio.run(main())
-```
-
-With the 1.x SDK use `streamablehttp_client("https://mcp.inflowcrm.pl", headers={...})` instead.
-
----
-
-## OpenAI Agents SDK
-
-*Example* (`openai-agents` package):
-
-```python
-import asyncio, os
-from agents import Agent, Runner
-from agents.mcp import MCPServerStreamableHttp
-
-async def main():
-    async with MCPServerStreamableHttp(
-        name="inflowcrm",
-        params={
-            "url": "https://mcp.inflowcrm.pl",
-            "headers": {"Authorization": f"Bearer {os.environ['INFLOWCRM_API_KEY']}"},
-        },
-    ) as crm:
-        agent = Agent(name="CRM assistant", instructions=open("SKILL.md").read(), mcp_servers=[crm])
-        result = await Runner.run(agent, "How many customers do we have?")
-        print(result.final_output)
-
-asyncio.run(main())
-```
-
-The skill file doubles as the agent's instructions.
-
----
-
-## LangChain / LangGraph
-
-*Example* (`langchain-mcp-adapters` package):
-
-```python
-import os
-from langchain_mcp_adapters.client import MultiServerMCPClient
-
-client = MultiServerMCPClient({
-    "inflowcrm": {
-        "transport": "streamable_http",
-        "url": "https://mcp.inflowcrm.pl",
-        "headers": {"Authorization": f"Bearer {os.environ['INFLOWCRM_API_KEY']}"},
-    }
-})
-tools = await client.get_tools()   # pass to create_react_agent(...) or your own agent
-```
 
 ---
 
