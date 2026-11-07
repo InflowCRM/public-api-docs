@@ -21,7 +21,7 @@ There are two ways to connect. Both use the same address and the same tools.
 | | Sign in with your CRM account (OAuth) | API key |
 |---|---|---|
 | Best for | claude.ai, ChatGPT, Gemini, Claude Desktop connectors — and Claude Code, Gemini CLI | Claude Code, Gemini CLI, Codex, Cursor, VS Code, n8n, scripts, your own agents |
-| Who connects | A company administrator (employees only when your company has this enabled — see *Who can sign in* below) | Anyone holding the key of an integration user |
+| Who connects | A company administrator (employees: coming soon — see *Who can sign in* below) | Anyone holding the key of an integration user |
 | Acts as | The signed-in user, with their rights | The integration user (full rights in your company's data) |
 | Setup | Add a custom connector with the URL, sign in on your company's CRM page, allow access | Send the key in the `Authorization` header |
 
@@ -87,20 +87,17 @@ renewed automatically for up to 30 days of inactivity).
 | Account | Can sign in |
 |---|---|
 | Company administrator | **Yes**, whenever MCP is enabled for the company |
-| Employee (regular CRM user with a role) | **Only when your company asked InflowCRM to allow employees** — then within the limits of their role |
+| Employee (regular CRM user with a role) | **Not yet** — coming soon, within the permissions of their own role |
 | Integration user | No — integration users connect with their API key |
 
-Until employees are allowed, an employee who tries to connect sees *"To konto nie może łączyć aplikacji AI z CRM.
+**For now MCP is available to company administrators only.** An employee who tries to connect sees *"To konto nie może łączyć aplikacji AI z CRM.
 Skontaktuj się z administratorem firmy."* (This account cannot connect AI apps to the CRM — contact your company
-administrator.) Allowing employees is a feature InflowCRM switches on at the company's request; switching it off
-disconnects employees' apps immediately.
+administrator.) We will soon add an option that lets employees use MCP within the permissions of their own CRM role.
 
 What a signed-in connection may do:
 
-- **The user's own rights.** Which records a signed-in user sees and changes, and which field values, follow their
-  role, as in the CRM. To limit a person, limit their role. There are no separate OAuth scopes or a "read only" switch
-  at sign-in — see [Limit what each person can do](clients.md#limit-what-each-person-can-do).
-- An employee never gets the configuration tools (fields, list views, roles), even when the company has them.
+- **The account's own rights.** The assistant acts with the rights of the signed-in account. There are no separate OAuth
+  scopes or a "read only" switch at sign-in — see [Limit what each person can do](clients.md#limit-what-each-person-can-do).
 - Blocking or deleting the user in the CRM ends the access at once. Removing the connector in the AI app removes
   its sign-in from the app.
 
@@ -193,7 +190,7 @@ They add **13 tools** (up to **50** in total):
 | Saved list views | `get_list_views`, `create_list_view`, `update_list_view`, `delete_list_view` |
 | Roles | `list_roles`, `get_role`, `create_role`, `update_role`, `delete_role` |
 
-They are available only to a **company administrator** (signed in) or an **API key** — never to an employee.
+They are available only to a **company administrator** (signed in) or an **API key**.
 Configuration changes apply to **every user of the company** at once.
 
 ### Which tools you see
@@ -201,8 +198,6 @@ Configuration changes apply to **every user of the company** at once.
 - Tools your plan, the enabled features or your account do not allow are **not on the tool list** at all.
 - After InflowCRM enables a feature for your company, **reconnect** the AI app (or start a new chat) to see the new
   tools.
-- A signed-in employee sees the record tools, but a call fails when their role does not allow it (e.g. no access to
-  the module).
 
 Exposed modules: `customer`, `contact`, `task`, `note`, `order`, `potential`, `event`, `enlist`, `coach`, `room` —
 limited to the modules of your company's plan. `list_modules` returns them with the names your company configured.
@@ -257,7 +252,7 @@ below explains. Every tool belongs to a scope:
 | `lists:read` / `lists:write` | `get_list_views` / `create_list_view`, `update_list_view`, `delete_list_view` |
 | `roles:read` / `roles:write` | `list_roles`, `get_role` / `create_role`, `update_role`, `delete_role` |
 
-> **Today every API key receives all scopes**, and a signed-in user is limited by their role instead. Per-key scopes
+> **Today every API key receives all scopes**. Per-key scopes
 > are planned. Until then, restrict tools in your MCP client as shown above. The `fields:`, `lists:` and `roles:`
 > tools additionally need the configuration tools enabled for the company.
 
