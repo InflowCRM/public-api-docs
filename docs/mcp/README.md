@@ -335,6 +335,7 @@ confirmation on for deletes, bulk tools, template writes and configuration tools
 | Document generation | **20 calls per 5 minutes** | `generate_document` |
 | Template writes | **60 calls per 5 minutes** | create / update / delete of SMS, e-mail and document templates together |
 | Configuration writes | **30 calls per 5 minutes** (a call refused before it wrote anything is not counted — unless the limit itself refused it) | create / update / delete of fields, list views, roles, squads, pipelines and stages, and every settings write (module names, company data, numbering, backfill, branding), together |
+| Slow text searches | **30 per minute** per company | `search_records` with `query` when it looks inside words (`matchScope: "anywhere"`), uses a text with spaces or punctuation, or runs in a module without the fast word-start index; over the limit the tool answers `Too many text searches, retry in N s.` |
 | Failed authentication | 300 per 5 minutes per IP | counts `401` responses; once exceeded, every request from that IP gets `429` until the window resets |
 
 The request limit returns HTTP `429` with `Rate limit exceeded, retry in 42 s.`; the per-tool limits return a tool error such as

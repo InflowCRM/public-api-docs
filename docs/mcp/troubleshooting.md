@@ -160,6 +160,15 @@ Some AI apps (Claude, for example) cannot pass a large PDF from `generate_docume
 `hint`: ask the assistant to generate the document again with `saveToRecord: true` and open the file in the **Files**
 tab of the record in InflowCRM. The PDF saved to the record needs the `files:write` scope, as always.
 
+### A search misses a record, or times out
+
+A search answer with `matchScope: "word-start"` checked only the beginnings of words, so it can list some records and
+still miss one that has the text in the middle of a word. Ask the assistant to search again with
+`matchScope: "anywhere"` before it decides a record does not exist or creates a duplicate. A search that times out did not
+finish, and that does not mean the record is missing: do not create one on that basis. After `The text search took too long — narrow the query (more characters) and retry.` use a longer search text.
+After `Search did not finish: the mid-word scan timed out. This does NOT mean no record exists. Do not retry right away; do not create a record on this result.` do not retry right away.
+`Too many text searches, retry in N s.` means more than 30 slow searches in a minute for the company: wait for the time given.
+
 ### A count or report looks too low
 
 An answer with `truncated: true` found 500 or more candidates, so its numbers are lower bounds: use a longer search text.

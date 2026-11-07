@@ -35,6 +35,13 @@ Cache this per conversation — module fields rarely change mid-task.
 - **Exact criteria** → `filters` (equality, one value per field) or `advancedFilter` (`in`, ranges, `contains`,
   `isEmpty`, `OR`). Never send `filters` and `advancedFilter` together, and never `query` with `filters` — move
   the conditions into `advancedFilter` (operator `AND`).
+- A `query` answer carries `matchScope`. `word-start` = only word beginnings were checked, the middle of words was
+  NOT (`kowal` finds "Kowalski", but "Nowakowalski" only with `matchScope: "anywhere"`). `anywhere` = everything was
+  checked. `anywhere` is slower and limited to 30 slow searches per minute per company (`Too many text searches, retry in N s.`), so use it
+  to widen a `word-start` answer, not by default. `matchScope` without `query` is a validation error.
+- A search can time out: `The text search took too long — narrow the query (more characters) and retry.` or
+  `Search did not finish: the mid-word scan timed out. This does NOT mean no record exists. Do not retry right away; do not create a record on this result.` No answer does NOT mean the record does not exist: do not create a
+  record on that basis. A longer fragment helps only after the first message; after the second do not retry right away.
 - `truncated: true` in a `query` answer = 500 or more candidates matched; ask for or use a longer fragment.
   Counts in such an answer are lower bounds.
 - **"How many…"** → `count_records`. **Funnel / pipeline value** → `get_pipeline_summary` (one call, no paging).
@@ -64,7 +71,8 @@ Cache this per conversation — module fields rarely change mid-task.
 ## 3. Writing
 
 - Before `create_record`, check for duplicates (`find_record` / `search_records` on e-mail, NIP or name) unless
-  the user said to create anyway.
+  the user said to create anyway. If `search_records` answers `matchScope: "word-start"` and none of the records is the one you look for, search again
+  with `matchScope: "anywhere"` before you decide the record is missing. After a search that timed out do not create.
 - New Polish company from a NIP → `lookup_company_gus` first, then map name/address into the customer fields.
 - `update_record` changes only the keys you send. Sending back a record you fetched is fine — read-only system
   fields (`id`, `createdTime`, `recordNumber`…) are ignored — but not one read with `expandRelations`: send
@@ -273,7 +281,9 @@ Validation messages start with `VALIDATION_ERROR: ` (a bulk item's `error` too);
 | `Ignored read-only field(s): …` (in `warnings`, not an error) | The value was not stored; tell the user, change it another way (owner: the owner relation field) |
 | `CONFLICT: …` | The item clashes with the current state (name taken, role still has users) — follow the message |
 | `PERMISSION_DENIED: …` / `FORBIDDEN: …` | The connected user's role does not allow it (a read-only field, a bulk right, a note) — tell the user; do not look for a way around it |
-| `Too many …, retry in N s.` / HTTP 429 | Wait, or reduce calls (count/summary instead of paging) |
+| `Too many …, retry in N s.` (also `Too many text searches, retry in N s.`) / HTTP 429 | Wait, or reduce calls (count/summary instead of paging); for searches, avoid `matchScope: "anywhere"` unless needed |
+| `The text search took too long …` | The search did not finish, so a missing result proves nothing; do not create a record. Retry with a longer fragment |
+| `Search did not finish: the mid-word scan timed out …` | Same: no result proves nothing, do not create a record, and do not retry right away |
 | `INTERNAL_ERROR: …` | Retry once later; then report to the user |
 
 Users are read-only over MCP (no tool changes users or API keys; squad membership is the only exception, with the
