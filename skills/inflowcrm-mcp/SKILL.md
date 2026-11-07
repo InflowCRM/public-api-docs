@@ -80,7 +80,8 @@ These rules apply to records, templates and CRM configuration alike.
   calls — split only where a limit forces it (25 fields, 50 records), without asking again.
 - **`confirm: true` only after the user really agreed in this conversation** — never by default, never "because the
   tool refuses otherwise", never because earlier consent covered something else. Tools that need it:
-  `delete_field`, `delete_list_view`, `delete_role`, `update_role`, all `delete_*_template`, and
+  `update_field`, `delete_field`, `create_list_view`, `update_list_view`, `delete_list_view`, `create_role`,
+  `update_role`, `delete_role`, all `delete_*_template`, and
   `update_sms_template` / `update_email_template` / `update_document_template` when the template is sent
   automatically (or the document is attached to such a template) and its content changes. When a tool asks for
   `confirm`, show the user the change, ask, and only then call again.
@@ -149,7 +150,7 @@ API key. If they are not in your tool list, the user does such changes in the CR
 | `Stage 'X' not found in pipeline …` | Use a stage name from the list in the message |
 | `RESOURCE_NOT_FOUND: …` | The id does not exist in this company (or you cannot see it) — search again |
 | `Unknown tag(s) in …` | Use tags from `get_template_tags` |
-| `… call again with confirm: true` / invalid `confirm` | Show the change to the user, get their OK, then call again with `confirm: true` |
+| `… needs confirm: true` / `… call again with confirm: true` / invalid `confirm` | Show the change to the user, get their OK, then call again with `confirm: true` |
 | `CONFLICT: …` | The item clashes with the current state (name taken, role still has users) — follow the message |
 | `PERMISSION_DENIED: …` / `FORBIDDEN: …` | The connected user's role does not allow it — tell the user; do not look for a way around it |
 | `Too many …, retry in N s.` / HTTP 429 | Wait, or reduce calls (count/summary instead of paging) |

@@ -87,7 +87,15 @@ Several records of one module (max 50 ids), paginated. Ids that do not exist are
 { "status": "Aktywny", "city": "Kraków" }
 ```
 
-- A **date-only** value (`"2026-05-10"`) on a Date/Datetime field matches the whole day (server time zone); a value with a time matches exactly.
+- A date **without a time** on a Date or Datetime field matches that **whole day in Europe/Warsaw time**, midnight to
+  midnight (23 or 25 hours long on the days the clocks change). Write it as `2026-05-10`, `2026/05/10` or in the
+  field's own date format (`10.05.2026` for `dd.MM.yyyy`; a two-digit year such as `10.05.26` for `dd.MM.yy` works too).
+  A record saved at `2026-01-31T23:30:00Z` is on `2026-02-01` in Warsaw, so it matches `2026-02-01`, not `2026-01-31`.
+- A full ISO timestamp (`2026-05-10T10:00:00+02:00`) matches that exact moment. Write the offset (`Z`, `+02:00`)
+  right after the time, with no space; a time without an offset is read in the server's time zone.
+- Any other notation of a date — a month name (`May 10 2026`) or a zone written in the text
+  (`2026/05/10 GMT+0900`) — matches no records; it is not an error.
+- For a day in `filters`, `count_records` and `pagination.total` of `search_records` give the same number of records.
 - A **DateRange** field takes `[from, to]` and matches records whose range **starts** between `from` and `to`:
   `{ "eventDate": ["2026-05-10", "2026-05-20"] }`. Leave `from` empty (`["", "2026-05-20"]`) for "starts up to";
   with only `from` it matches records starting on that day.
@@ -119,8 +127,23 @@ Several records of one module (max 50 ids), paginated. Ids that do not exist are
 `advancedFilter` also accepts the system fields `id`, `createdTime`, `modifiedTime`, `createdBy`, `modifiedBy`,
 `owner`, `recordNumber`. Unknown field names are rejected with the list of valid ones.
 
-> Range conditions (`greater`, `lower`, …) on dates are supported for `createdTime` and `modifiedTime`. For your own
-> Date fields use `filters` (a whole day) or a DateRange field.
+> **Dates in `advancedFilter`.** On a Date or Datetime field and on `createdTime` / `modifiedTime`, a date without a
+> time stands for its **whole day in Europe/Warsaw time**. Write it as `2026-05-10` or in the field's own date
+> format on your own fields, and as `2026-05-10` or `2026/05/10` on `createdTime` / `modifiedTime`. `greater` means
+> after that day, `greaterOrEqual` from its start, `lower` before it, `lowerOrEqual` up to its end. A full ISO timestamp is compared
+> as the moment it names; write its offset, because a time without an offset is read in the server's time zone.
+>
+> - `equal`, `notEqual`, `in` and `notIn` with a date without a time are refused:
+>   `VALIDATION_ERROR: A date without a time stands for a whole day in Europe/Warsaw, which one … cannot express.`
+>   Use two conditions in one `AND` filter (`greaterOrEqual` the day, `lower` the next day), a full timestamp, or
+>   `filters` on a Date field. To match everything outside a day, use an `OR` filter of two conditions (`lower` the
+>   day, `greaterOrEqual` the next day).
+> - Any other value on a Date or Datetime field is refused with `VALIDATION_ERROR: Wrong value type: …`, including a
+>   year written with a sign or with six digits (`+002026-05-10T12:00:00Z`). On `createdTime` and `modifiedTime` a
+>   value the date storage accepts is compared as it reads it, and text it cannot read (`next tuesday`) is refused.
+> - A day is compared with stored date values. A record that holds its date as ISO text instead of a date value is
+>   found by `filters` but not by `advancedFilter`.
+> - A DateRange field takes `filters` with `[from, to]`.
 
 **Rules**
 
@@ -394,8 +417,10 @@ only for a company administrator (signed in) or an API key; an employee never ge
 
 - Creates, updates and deletes of fields, list views and roles share one limit: **30 calls per 5 minutes**
   (`Too many configuration changes, retry in N s.`).
-- `delete_field`, `delete_list_view`, `update_role` and `delete_role` require `confirm: true` — send it only after the
-  user agreed. For several changes, ask once for the whole batch.
+- `update_field`, `delete_field`, `create_list_view`, `update_list_view`, `delete_list_view`, `create_role`, `update_role` and `delete_role` require `confirm: true` — send it only after the
+  user agreed. For several changes, ask once for the whole batch. Without it the tool changes nothing and answers
+  `VALIDATION_ERROR: This change needs confirm: true. Ask the user to approve it, then call again with confirm: true.`
+  Anything but the boolean `true` is refused the same way.
 - Ids of other companies or deleted items → `RESOURCE_NOT_FOUND: … does not exist.` with the tool to call next.
 - Deletes are soft: the item disappears from the CRM, stored record values are kept.
 
@@ -439,7 +464,7 @@ Adds a custom field. Its type and Api field name cannot be changed later.
 #### `update_field`
 Changes one field. Send only what changes.
 
-- **Input:** `{ module, fieldId, label?, description?, required?, hidden?, pickListValues?, addPickListValues?, removePickListValues?, pickListColors?, allowNewItems?, defaultValue?, length?, decimals?, maxRating?, showInList?, showInCreateForm? }`
+- **Input:** `{ module, fieldId, confirm: true, label?, description?, required?, hidden?, pickListValues?, addPickListValues?, removePickListValues?, pickListColors?, allowNewItems?, defaultValue?, length?, decimals?, maxRating?, showInList?, showInCreateForm? }`
 - **Pick lists:** either `pickListValues` (the full new list) **or** `addPickListValues` / `removePickListValues`, not
   both. A pick list keeps at least one value. Colors are merged; `""` clears a color.
 - **Removing a value never changes records:** the answer lists `removedPickListValues: [{ value, recordsStillUsing }]`
@@ -479,6 +504,7 @@ All saved list views of the company, whoever may see them.
 | `public` | boolean | default `false` |
 | `roleIds`, `userIds`, `squadIds` | string[] | who sees the view (≤ 100 each) |
 | `visibleAsButton` | boolean | default `false` |
+| `confirm` | boolean | required: `true` |
 
 - **Audience:** a view must be `public: true` or name at least one role, user or squad.
 - **Operators by field type:**
@@ -501,7 +527,7 @@ All saved list views of the company, whoever may see them.
 - **Output:** the created view. Name taken → `CONFLICT: A list view named '…' already exists in module '…'…`
 
 #### `update_list_view`
-- **Input:** `{ listId, name?, columns?, conditions?, sorting?, public?, roleIds?, userIds?, squadIds?, visibleAsButton? }`
+- **Input:** `{ listId, confirm: true, name?, columns?, conditions?, sorting?, public?, roleIds?, userIds?, squadIds?, visibleAsButton? }`
 - A property you send **replaces** the stored one entirely — read the view first and send the full new value.
   `conditions: {}` clears the filter, `sorting: null` removes the sort. The module cannot change.
 
@@ -521,7 +547,7 @@ All saved list views of the company, whoever may see them.
   `customPermissions` and are changed there.
 
 #### `create_role`
-- **Input:** `{ name, copyFromRoleId?, modules?, customPermissions? }` — `name` unique; without `copyFromRoleId` the
+- **Input:** `{ name, confirm: true, copyFromRoleId?, modules?, customPermissions? }` — `name` unique; without `copyFromRoleId` the
   role starts from the CRM defaults, with it from a copy of that role (including its field rules).
 - `modules`: `[{ module, <right>: true | false, … }]`, each module once; `customPermissions`: e.g.
   `canSendEmail`, `canSendSms`, `canSeeEmail` (`none` | `see` | `seeSquad` | `seeOthers`), `canEditEmailTemplate`
