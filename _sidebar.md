@@ -27,6 +27,7 @@
 - [🔌 Connect your AI tool](/docs/mcp/clients.md)
 - [🧰 MCP Tools](/docs/mcp/tools.md)
 - [🧠 Agent Skill](/docs/mcp/skill.md)
+- [🩺 MCP Troubleshooting](/docs/mcp/troubleshooting.md)
 
 **Integrations**
 - [🔗 n8n Community Node](/docs/n8n-node.md)
