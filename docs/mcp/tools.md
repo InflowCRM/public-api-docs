@@ -394,8 +394,10 @@ only for a company administrator (signed in) or an API key; an employee never ge
 
 - Creates, updates and deletes of fields, list views and roles share one limit: **30 calls per 5 minutes**
   (`Too many configuration changes, retry in N s.`).
-- `delete_field`, `delete_list_view`, `update_role` and `delete_role` require `confirm: true` — send it only after the
-  user agreed. For several changes, ask once for the whole batch.
+- `update_field`, `delete_field`, `create_list_view`, `update_list_view`, `delete_list_view`, `create_role`, `update_role` and `delete_role` require `confirm: true` — send it only after the
+  user agreed. For several changes, ask once for the whole batch. Without it the tool changes nothing and answers
+  `VALIDATION_ERROR: This change needs confirm: true. Ask the user to approve it, then call again with confirm: true.`
+  Anything but the boolean `true` is refused the same way.
 - Ids of other companies or deleted items → `RESOURCE_NOT_FOUND: … does not exist.` with the tool to call next.
 - Deletes are soft: the item disappears from the CRM, stored record values are kept.
 
@@ -439,7 +441,7 @@ Adds a custom field. Its type and Api field name cannot be changed later.
 #### `update_field`
 Changes one field. Send only what changes.
 
-- **Input:** `{ module, fieldId, label?, description?, required?, hidden?, pickListValues?, addPickListValues?, removePickListValues?, pickListColors?, allowNewItems?, defaultValue?, length?, decimals?, maxRating?, showInList?, showInCreateForm? }`
+- **Input:** `{ module, fieldId, confirm: true, label?, description?, required?, hidden?, pickListValues?, addPickListValues?, removePickListValues?, pickListColors?, allowNewItems?, defaultValue?, length?, decimals?, maxRating?, showInList?, showInCreateForm? }`
 - **Pick lists:** either `pickListValues` (the full new list) **or** `addPickListValues` / `removePickListValues`, not
   both. A pick list keeps at least one value. Colors are merged; `""` clears a color.
 - **Removing a value never changes records:** the answer lists `removedPickListValues: [{ value, recordsStillUsing }]`
@@ -479,6 +481,7 @@ All saved list views of the company, whoever may see them.
 | `public` | boolean | default `false` |
 | `roleIds`, `userIds`, `squadIds` | string[] | who sees the view (≤ 100 each) |
 | `visibleAsButton` | boolean | default `false` |
+| `confirm` | boolean | required: `true` |
 
 - **Audience:** a view must be `public: true` or name at least one role, user or squad.
 - **Operators by field type:**
@@ -501,7 +504,7 @@ All saved list views of the company, whoever may see them.
 - **Output:** the created view. Name taken → `CONFLICT: A list view named '…' already exists in module '…'…`
 
 #### `update_list_view`
-- **Input:** `{ listId, name?, columns?, conditions?, sorting?, public?, roleIds?, userIds?, squadIds?, visibleAsButton? }`
+- **Input:** `{ listId, confirm: true, name?, columns?, conditions?, sorting?, public?, roleIds?, userIds?, squadIds?, visibleAsButton? }`
 - A property you send **replaces** the stored one entirely — read the view first and send the full new value.
   `conditions: {}` clears the filter, `sorting: null` removes the sort. The module cannot change.
 
@@ -521,7 +524,7 @@ All saved list views of the company, whoever may see them.
   `customPermissions` and are changed there.
 
 #### `create_role`
-- **Input:** `{ name, copyFromRoleId?, modules?, customPermissions? }` — `name` unique; without `copyFromRoleId` the
+- **Input:** `{ name, confirm: true, copyFromRoleId?, modules?, customPermissions? }` — `name` unique; without `copyFromRoleId` the
   role starts from the CRM defaults, with it from a copy of that role (including its field rules).
 - `modules`: `[{ module, <right>: true | false, … }]`, each module once; `customPermissions`: e.g.
   `canSendEmail`, `canSendSms`, `canSeeEmail` (`none` | `see` | `seeSquad` | `seeOthers`), `canEditEmailTemplate`
