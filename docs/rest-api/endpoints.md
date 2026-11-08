@@ -697,6 +697,10 @@ curl -X POST "https://srv.inflowcrm.pl/api/records/getByIds" \
 
 Returns metadata for all fields in a module.
 
+`block` is the form block the field sits in (the same label can repeat in two blocks), `hidden` tells whether the
+field is hidden in the CRM forms (hidden fields are still listed and accepted on write), and `decimals` is the number
+of decimal places (`decimal` carries the same value). `defaultValue` is the value a new record gets in the CRM form.
+
 **Headers:**  
 `x-api-key: YOUR_API_KEY`
 
@@ -715,6 +719,9 @@ Returns metadata for all fields in a module.
       "apiFieldName": "email",
       "description": "User's email address",
       "decimal": null,
+      "decimals": null,
+      "block": "Basic information",
+      "hidden": false,
       "length": 255,
       "type": "string",
       "label": "Email",
