@@ -161,16 +161,17 @@ Tool results come back as JSON text in `result.content[0].text`; failures set `r
 
 ## 🧰 What the assistant can do
 
-Up to **37 tools** (depending on your plan and rights), grouped by capability (full reference:
+Up to **42 tools** (depending on your plan and rights), grouped by capability (full reference:
 **[MCP Tools](tools.md)**):
 
 | Capability | Tools |
 |---|---|
-| Discover | `list_modules`, `get_module_fields`, `get_sample_record` |
+| Discover | `whoami` (who the connection acts as), `list_modules`, `get_module_fields`, `get_sample_record` |
 | Read records | `search_records` (free-text `query`, filters, sort, paging), `find_record`, `count_records`, `get_record`, `get_records_by_ids` |
 | Write records | `create_record`, `update_record`, `create_records` / `update_records` (bulk, up to 50), `delete_record` (to trash) |
 | Pipelines | `get_pipelines`, `get_pipeline_summary` (records and value per stage) |
 | Files | `list_record_files`, `download_file`, upload via `create_record` / `update_record` |
+| Messages | `list_record_messages`, `get_message` (read the e-mails and SMS sent from a record) |
 | Users | `list_users`, `get_user` (read only — MCP never edits users) |
 | Documents | `list_document_templates`, `generate_document` (PDF, optionally saved to the record) |
 | Templates | `get_template_tags`; SMS: `list_sms_templates`, `get_sms_template`, `create_sms_template`, `update_sms_template`, `delete_sms_template`; e-mail: `list_email_templates`, `get_email_template`, `create_email_template`, `update_email_template`, `delete_email_template`; documents: `get_document_template`, `create_document_template`, `update_document_template`, `delete_document_template` |
@@ -182,13 +183,14 @@ The template tools **prepare templates** — they do not send SMS or e-mail. Mes
 ### 🛠️ Configuration tools
 
 Companies that want the assistant to help **configure the CRM** can ask InflowCRM to enable the configuration tools.
-They add **13 tools** (up to **50** in total):
+They add **19 tools** (up to **61** in total):
 
 | Capability | Tools |
 |---|---|
 | Fields and pick lists | `get_field_layout`, `create_field`, `update_field`, `delete_field` |
 | Saved list views | `get_list_views`, `create_list_view`, `update_list_view`, `delete_list_view` |
 | Roles | `list_roles`, `get_role`, `create_role`, `update_role`, `delete_role` |
+| Squads | `list_squads`, `create_squad`, `update_squad`, `delete_squad`, `add_users_to_squad`, `remove_users_from_squad` |
 
 They are available only to a **company administrator** (signed in) or an **API key**.
 Configuration changes apply to **every user of the company** at once.
@@ -237,7 +239,7 @@ below explains. Every tool belongs to a scope:
 
 | Scope | Tools |
 |---|---|
-| *(always)* | `list_modules` |
+| *(always)* | `list_modules`, `whoami` |
 | `records:read` | `get_module_fields`, `get_sample_record`, `search_records`, `find_record`, `count_records`, `get_record`, `get_records_by_ids`, `get_pipeline_summary` |
 | `records:write` | `create_record`, `create_records`, `update_record`, `update_records` |
 | `records:delete` | `delete_record` |
@@ -251,10 +253,12 @@ below explains. Every tool belongs to a scope:
 | `fields:read` / `fields:write` | `get_field_layout` / `create_field`, `update_field`, `delete_field` |
 | `lists:read` / `lists:write` | `get_list_views` / `create_list_view`, `update_list_view`, `delete_list_view` |
 | `roles:read` / `roles:write` | `list_roles`, `get_role` / `create_role`, `update_role`, `delete_role` |
+| `squads:read` / `squads:write` | `list_squads` / `create_squad`, `update_squad`, `delete_squad`, `add_users_to_squad`, `remove_users_from_squad` |
+| `messages:read` | `list_record_messages`, `get_message` |
 
 > **Today every API key receives all scopes**. Per-key scopes
-> are planned. Until then, restrict tools in your MCP client as shown above. The `fields:`, `lists:` and `roles:`
-> tools additionally need the configuration tools enabled for the company.
+> are planned. Until then, restrict tools in your MCP client as shown above. The `fields:`, `lists:`, `roles:` and
+> `squads:` tools additionally need the configuration tools enabled for the company.
 
 ### Built-in safeguards
 
@@ -266,8 +270,9 @@ below explains. Every tool belongs to a scope:
   valid ones; values are
   validated against the field type (pick list, number, date, e-mail, rating, length, required).
 - **Soft delete** — `delete_record` moves the record to the CRM trash.
-- **No user editing** — no tool changes users or API keys. Roles can be changed only with the configuration tools,
-  and `delete_role` never moves users to another role.
+- **No user editing** — no tool changes users or API keys; the only exception is squad membership
+  (`add_users_to_squad`, `remove_users_from_squad`), available with the configuration tools. Roles can be changed
+  only with the configuration tools, and `delete_role` never moves users to another role.
 - **Safe template HTML** — e-mail and document template HTML is sanitized when saved (scripts and other unsafe
   content are removed).
 - **Audit log** — every tool call that passes input validation is logged with the tool name, argument *names*,
@@ -305,6 +310,9 @@ The request limit returns HTTP `429`; the per-tool limits return a tool error su
 | Ids per `get_records_by_ids` | 50 |
 | Items per bulk call | 50 |
 | Fields per `delete_field` | 25 |
+| Users per `add_users_to_squad` / `remove_users_from_squad` | 50 |
+| Messages per `list_record_messages` page | 50 (default 20); `offset` up to 500 |
+| Message reads (`list_record_messages`, `get_message`) | 120 per 5 minutes |
 | Files per write | 10, each ≤ 5 MB decoded; whole request ≤ 7 MB (≈ 5 MB of files in total) |
 | `download_file` / `generate_document` | ≤ 5 MB per file |
 | Filter conditions | 20 per `advancedFilter` |
