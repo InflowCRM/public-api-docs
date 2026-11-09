@@ -363,9 +363,9 @@ the same path.
   stored exactly as before. A value that is not a date at all (e.g. `"TBD"`) behaves as before.
 - **Multi-value fields** (MultiPicklist, MultiEmail, MultiPhone): a single value **replaces** the whole list
   (`"a"` is stored as `["a"]`); `""` or `null` empties the field; an object or a boolean returns 400. On MultiEmail and
-  MultiPhone a single string is validated like one list item, so `"a@x.pl, b@y.pl"` returns 400 — send an array
-  (`["a@x.pl", "b@y.pl"]`). Earlier a `createRecord` stored such a string as it was, and `updateRecord` could corrupt the
-  list.
+  MultiPhone a single string becomes a one-item list and is **not split on commas**: `"a@x.pl, b@y.pl"` is stored as one
+  item — to save several addresses send an array (`["a@x.pl", "b@y.pl"]`). The REST API does not check the format of an
+  e-mail address or phone number (as before). Earlier `updateRecord` could corrupt the list.
 - **Single relation:** `""` clears the relation, like `null` (earlier it returned an error).
 - **Unchanged:** the MCP-only additions (`allowNewItems` in field lists, `userType` on users, `warnings` on list views,
   `templatesUsingField`) do not exist in the REST API; `getModuleFields`, `getUserList` and the REST error responses
