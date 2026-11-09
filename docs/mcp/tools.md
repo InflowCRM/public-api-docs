@@ -15,7 +15,8 @@ connecting, authentication and limits.
 - Unknown top-level arguments are rejected (input validation error). Every record in an answer has an `id`.
 - Read-only tools are marked with the MCP `readOnlyHint`; the delete tools and `update_role` carry `destructiveHint`.
 - Tools that need `confirm: true` refuse to run without it — set it only after the user agreed.
-- A signed-in (OAuth) user works within their role; the API key acts as the integration user.
+- A signed-in (OAuth) user works within their role; the API key acts as the integration user. A signed-in **employee**
+  also gets a tool list that follows the role — see [Tools depend on the role](#tools-depend-on-the-role).
 
 ---
 
@@ -26,11 +27,15 @@ The CRM user this connection acts as. Use `userId` as the owner for "my records"
 needed.
 
 - **Input:** none
-- **Output:** `{ userId, name, email, userType, authMethod, clientId?, scopes, company: { name, bundle }, adminToolsEnabled, messagesAvailable, notesAvailable }`
+- **Output:** `{ userId, name, email, userType, authMethod, clientId?, scopes, company: { name, bundle }, adminToolsEnabled, messagesAvailable, notesAvailable, effectiveRights }`
   - `userType`: `admin`, `member` or `integration` (API key); `authMethod`: `apiKey` or `oauth`; `clientId` only for `oauth`.
   - `adminToolsEnabled`: whether the [configuration tools](#configuration-tools) are on the tool list.
   - `messagesAvailable`: whether the [message tools](#messages) are on the tool list.
   - `notesAvailable`: whether [`list_record_notes`](#notes) is on the tool list.
+  - `effectiveRights`: `{ "<module>": { see, create, modify, delete } }` — what the CRM role allows per module, for the
+    modules your company has. Values: `none`, `own` (own records and records shared with the user), `squad`, `all`;
+    `create` is `all` or `none`. API keys and administrators get `all` everywhere. Read it before planning writes
+    instead of trying and being refused.
 
 ### `list_modules`
 Lists the modules available to the API key with the singular/plural names configured by the company. **Start here.**
@@ -272,6 +277,25 @@ not affected.)
 
 ---
 
+## Tools depend on the role
+
+For a **signed-in employee** the tool list follows the CRM role: a tool the role gives no right for is **not on the
+tool list** — instead of being listed and refused when called. For example, an employee whose role cannot delete
+anywhere has no `delete_record`; one who cannot create records has no `create_record`; `create_records` needs
+create **and** bulk import on the same module, `update_records` modify **and** bulk edit; the message tools need the
+right to see e-mail or SMS; `generate_document` needs the right to see documents; each list view tool needs its own
+list right. A tool that is not listed cannot be called (the server answers like for an unknown tool).
+
+- **Administrators and API keys are not filtered**: their tool list is as before.
+- The `module` argument still accepts every module of the company. A module the role may not use is refused
+  when the tool is **called**, with `PERMISSION_DENIED` — the checks at call time are unchanged; the shorter list only
+  saves the assistant from trying.
+- `whoami.effectiveRights` and the `access` of each field in `get_module_fields` say what the role allows.
+- After an administrator changes the role, the employee sees the new list when the AI app fetches the tool list again
+  (the role is cached for about a minute) — start a new chat if it does not.
+
+---
+
 ## Pipelines
 
 ### `get_pipelines`
@@ -394,7 +418,8 @@ One e-mail or SMS with its text and, for e-mails, the sender name and the names 
 Active users of the company: `id`, `systemLabel` (name), `email`, `role` and other fields with Api field names. Use
 the ids to set `owner` or user relations. `role` is `{ id, name }`, or `null` when the user has no valid role; it is
 left out for a signed-in employee. No passwords or API keys are ever returned. A signed-in employee sees the users and
-fields the CRM's user list shows them.
+fields the CRM's user list shows them (no hidden fields) and, of the system fields, only `id` — no `createdTime`,
+`modifiedTime`, `createdBy` or `modifiedBy`.
 
 ### `get_user`
 - **Input:** `{ userId }` — answers like one `list_users` item, with `role` (`{ id, name }` or `null`) unless the

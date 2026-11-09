@@ -204,6 +204,9 @@ own — whether or not the configuration tools are enabled for the company. See
 ### Which tools you see
 
 - Tools your plan, the enabled features or your account do not allow are **not on the tool list** at all.
+- For a signed-in **employee** the list also follows the CRM role: a tool the role has no right for is not listed
+  (see [Tools depend on the role](tools.md#tools-depend-on-the-role)). Administrators and API keys see the full list.
+  `whoami` returns `effectiveRights` per module.
 - After InflowCRM enables a feature for your company, **reconnect** the AI app (or start a new chat) to see the new
   tools.
 
