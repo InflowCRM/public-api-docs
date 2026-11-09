@@ -367,6 +367,9 @@ the same path.
   (`["a@x.pl", "b@y.pl"]`). Earlier a `createRecord` stored such a string as it was, and `updateRecord` could corrupt the
   list.
 - **Single relation:** `""` clears the relation, like `null` (earlier it returned an error).
+- **Unchanged:** the MCP-only additions (`allowNewItems` in field lists, `userType` on users, `warnings` on list views,
+  `templatesUsingField`) do not exist in the REST API; `getModuleFields`, `getUserList` and the REST error responses
+  are the same as before.
 
 ---
 
