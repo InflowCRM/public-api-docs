@@ -73,8 +73,13 @@ Cache this per conversation — module fields rarely change mid-task.
 - **Defaults:** on `create_record` / `create_records` a field you leave out gets its `defaultValue` from
   `get_module_fields`; send `null` or `""` if the field must stay empty. A date without a time is stored as midnight
   in Europe/Warsaw.
-- **Relations:** send record ids (customer/contact relations: ids from search). `null` clears. Unknown or foreign
-  ids are rejected.
+- **Dates must exist:** `2026-02-30`, `2026-04-31` or `2027-02-29` is refused with `VALIDATION_ERROR` — never moved to
+  the next month. Do not "fix" it by guessing: ask the user which day they meant.
+- **Multi-value fields (`MultiPicklist`, `MultiEmail`, `MultiPhone`) are always an array**, e.g. `["a@x.pl", "b@y.pl"]`.
+  A single value replaces the whole list, so to add an item read the record and send the full list; `[]`, `""` or
+  `null` empties it. `"a@x.pl, b@y.pl"` in one string is refused. A DateRange is `[from, to]`.
+- **Relations:** send record ids (customer/contact relations: ids from search). `null` or `""` clears. Unknown or
+  foreign ids are rejected.
 - **Owner:** new records belong to the connected user (the integration user for an API key). To assign a person,
   put a user id from `list_users` in the field whose `relationField` is `owner` (its apiFieldName comes from
   `get_module_fields`).
@@ -179,6 +184,13 @@ tools an employee has follow their role — a missing tool means the role does n
   CRM's role editor shows for the company are listed (never history). Rights to manage users are granted only in the
   CRM. `delete_role` works only for a role without users. `list_users` / `get_user` show each user's `role`
   (`{ id, name }`).
+  Rights depend on each other as in the CRM role editor (`modify`/`delete` need `see`, `*Squad` needs `seeSquad`,
+  `*Others` needs `seeOthers`, `mass*` need the matching `*Others`): a call that breaks this is **refused**, not
+  corrected — set the missing rights or switch the dependent one off, and show the user what you changed.
+  **Check `warnings` of `get_role` / `list_roles` before copying a role** (`copyFromRoleId`) or editing it: the whole copy
+  is validated, so a source with warnings needs explicit corrections or has to be fixed in the CRM; a role with
+  duplicate rules for a module cannot be copied or changed in that module over MCP. `userCount` counts active users only
+  (`blockedUserCount` shows blocked ones) — still quote it when you ask to confirm `update_role`.
 - **Squads:** `list_squads` first. Adding or removing members changes which records those users see (`seeSquad`), so
   list the change and ask once; `add_users_to_squad` / `remove_users_from_squad` / `delete_squad` need `confirm: true`.
 - `update_field`, `create_list_view`, `update_list_view`, `create_role` and every delete of a field, list view or
