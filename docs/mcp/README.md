@@ -199,16 +199,18 @@ They add **19 tools** (up to **62** in total):
 They are available only to a **company administrator** (signed in) or an **API key**.
 Configuration changes apply to **every user of the company** at once.
 
-**Exception:** a signed-in **employee** gets the four list view tools (`get_list_views`, `create_list_view`,
+**Exception:** an **employee signed in with OAuth** gets the four list view tools (`get_list_views`, `create_list_view`,
 `update_list_view`, `delete_list_view`) for their own **private** views — no sharing, no `confirm`, only views they
-own — whether or not the configuration tools are enabled for the company. See
+own — whether or not the configuration tools are enabled for the company. API keys (an employee's included) do not get
+them. See
 [Your own list views](tools.md#your-own-list-views-signed-in-employees).
 
 ### Which tools you see
 
 - Tools your plan, the enabled features or your account do not allow are **not on the tool list** at all.
-- For a signed-in **employee** the list also follows the CRM role: a tool the role has no right for is not listed
-  (see [Tools depend on the role](tools.md#tools-depend-on-the-role)). Administrators and API keys see the full list.
+- For an employee **signed in with OAuth** the list also follows the CRM role: a tool the role has no right for is not
+  listed (see [Tools depend on the role](tools.md#tools-depend-on-the-role)). Administrators and API keys see the full
+  list.
   `whoami` returns `effectiveRights` per module.
 - After InflowCRM enables a feature for your company, **reconnect** the AI app (or start a new chat) to see the new
   tools.
@@ -274,7 +276,7 @@ below explains. Every tool belongs to a scope:
 > **Today every API key receives all scopes**. Per-key scopes
 > are planned. Until then, restrict tools in your MCP client as shown above. The `fields:`, `lists:`, `roles:` and
 > `squads:` tools additionally need the configuration tools enabled for the company — except the list view tools of a
-> signed-in employee (own private views).
+> employee signed in with OAuth (own private views).
 
 ### Built-in safeguards
 

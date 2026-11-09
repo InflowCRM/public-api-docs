@@ -34,8 +34,9 @@ needed.
   - `notesAvailable`: whether [`list_record_notes`](#notes) is on the tool list.
   - `effectiveRights`: `{ "<module>": { see, create, modify, delete } }` — what the CRM role allows per module, for the
     modules your company has. Values: `none`, `own` (own records and records shared with the user), `squad`, `all`;
-    `create` is `all` or `none`. API keys and administrators get `all` everywhere. Read it before planning writes
-    instead of trying and being refused.
+    `create` is `all` or `none`. Administrators and integration-user API keys get `all` everywhere; an API key tied
+    to an employee account reports that role's real rights. Read it before planning writes instead of trying and
+    being refused.
 
 ### `list_modules`
 Lists the modules available to the API key with the singular/plural names configured by the company. **Start here.**
@@ -55,7 +56,8 @@ before searching, filtering, creating or updating.
   [Fields an employee cannot read or change](#fields-an-employee-cannot-read-or-change)); only required fields and
   fields the CRM shows anyway stay.
 - `access`: `"full"` — the field can be written — or `"read"` — the connected user's CRM role cannot change it, and a
-  write to it is refused with `PERMISSION_DENIED`. API keys and administrators always get `"full"`. Check it before
+  write to it is refused with `PERMISSION_DENIED`. Administrators and integration-user API keys always get `"full"`;
+  an API key tied to an employee account gets the role's real access. Check it before
   you build a `data` payload.
 - `decimals`: decimal places of a number field. `decimal` carries the same value for older clients.
 - `defaultValue`: the value a new record gets in this field when you do not send one (see [`data`](#data--field-values)).
@@ -242,8 +244,8 @@ Moves a record to the CRM trash. → `{ id, deleted: true }`
 
 ### Fields an employee cannot read or change
 
-For a **signed-in employee** the CRM role decides per field, exactly as in the CRM. (API keys and administrators are
-not affected.)
+For an **employee** the CRM role decides per field, exactly as in the CRM. (Administrators and integration-user API
+keys are not affected.)
 
 - **Hidden fields and fields the role may not read are invisible.** They are not listed by `get_module_fields`, not
   returned in any answer (records, expanded relations, `list_users`, documents, the files of a hidden File field) and
@@ -285,14 +287,17 @@ not affected.)
 
 ## Tools depend on the role
 
-For a **signed-in employee** the tool list follows the CRM role: a tool the role gives no right for is **not on the
-tool list** — instead of being listed and refused when called. For example, an employee whose role cannot delete
-anywhere has no `delete_record`; one who cannot create records has no `create_record`; `create_records` needs
+For an employee **signed in with OAuth** the tool list follows the CRM role: a tool the role gives no right for is
+**not on the tool list** — instead of being listed and refused when called. For example, an employee whose role cannot
+delete anywhere has no `delete_record`; one who cannot create records has no `create_record`; `create_records` needs
 create **and** bulk import on the same module, `update_records` modify **and** bulk edit; the message tools need the
-right to see e-mail or SMS; `generate_document` needs the right to see documents; each list view tool needs its own
-list right. A tool that is not listed cannot be called (the server answers like for an unknown tool).
+right to see e-mail or SMS (and a module with messages); `get_pipelines` and `get_pipeline_summary` need the right to
+see orders or potentials; `list_record_notes` needs the right to see notes **and** at least one parent module;
+`generate_document` needs the right to see documents; each list view tool needs its own list right. A tool that is not
+listed cannot be called (the server answers like for an unknown tool).
 
-- **Administrators and API keys are not filtered**: their tool list is as before.
+- **Administrators and API keys are not filtered** — an API key tied to an employee account included: their tool list
+  and scopes are as before (the checks at call time still apply to that account's role).
 - The `module` argument still accepts every module of the company. A module the role may not use is refused
   when the tool is **called**, with `PERMISSION_DENIED` — the checks at call time are unchanged; the shorter list only
   saves the assistant from trying.
@@ -351,6 +356,10 @@ single note can still be fetched by id with `get_record` / `get_records_by_ids` 
   record you can read, otherwise
   `VALIDATION_ERROR: A note must stay linked to at least one record you can read. Set one of its relation fields to such a record (get_module_fields lists them).`
   An `update_record` that would remove the last visible parent is refused the same way.
+- **After a write** the answer shows the note only when you can still read it. If an employee hands a note over to
+  another owner and can no longer see it, `update_record` answers with just `{ "id": … }`. If a concurrent change leaves
+  the note without a visible parent, the answer is `RESOURCE_NOT_FOUND` although the write was done — the note is an
+  orphan, invisible to everyone.
 - Notes have **no document templates and no template tags**: `get_template_tags` and the document template tools do
   not accept `module: "note"`
   (`Notes have no document templates or template tags; read notes with list_record_notes on the parent record`), and
@@ -373,7 +382,8 @@ of related records (for example of an order of this customer) are listed under t
 - A parent you cannot see reads as `RESOURCE_NOT_FOUND`. A role without the right to see notes gets
   `PERMISSION_DENIED`.
 - Needs the `records:read` scope and the note module. Note reads share one limit: **120 calls per 5 minutes**.
-  `whoami` reports the tool as `notesAvailable`.
+  `whoami` reports the tool as `notesAvailable`. For an employee signed in with OAuth the tool is listed only when the
+  role may see notes and at least one parent module; administrators and API keys always have it.
 
 ---
 
@@ -663,7 +673,7 @@ call. The fields disappear from forms and lists, records keep their values, and 
 
 ### Saved list views
 
-> **Signed-in employees** get these four tools too, in a restricted form that needs no configuration tools: they manage
+> **Employees signed in with OAuth** get these four tools too, in a restricted form that needs no configuration tools: they manage
 > only their **own private views** — see [Your own list views](#your-own-list-views-signed-in-employees). The
 > description below is for administrators and API keys.
 
@@ -719,8 +729,10 @@ All saved list views of the company, whoever may see them.
 
 #### Your own list views (signed-in employees)
 
-A signed-in employee whose CRM role may use saved list views (`see`, `create`, `modify`, `delete` on lists) gets
-`get_list_views`, `create_list_view`, `update_list_view` and `delete_list_view` for views that are **theirs alone**.
+An employee **signed in with OAuth** whose CRM role may use saved list views (`see`, `create`, `modify`, `delete` on
+lists) gets `get_list_views`, `create_list_view`, `update_list_view` and `delete_list_view` for views that are
+**theirs alone**. An API key — one tied to an employee account too — never gets this employee variant; with the
+configuration tools enabled it gets the administrator tools below, as before.
 Each tool appears only when the role allows what it does (see
 [Tools depend on the role](#tools-depend-on-the-role)). Needs the `lists:read` / `lists:write` scopes.
 
