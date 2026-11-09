@@ -161,7 +161,7 @@ Tool results come back as JSON text in `result.content[0].text`; failures set `r
 
 ## 🧰 What the assistant can do
 
-Up to **42 tools** (depending on your plan and rights), grouped by capability (full reference:
+Up to **43 tools** (depending on your plan and rights), grouped by capability (full reference:
 **[MCP Tools](tools.md)**):
 
 | Capability | Tools |
@@ -171,6 +171,7 @@ Up to **42 tools** (depending on your plan and rights), grouped by capability (f
 | Write records | `create_record`, `update_record`, `create_records` / `update_records` (bulk, up to 50), `delete_record` (to trash) |
 | Pipelines | `get_pipelines`, `get_pipeline_summary` (records and value per stage) |
 | Files | `list_record_files`, `download_file`, upload via `create_record` / `update_record` |
+| Notes | `list_record_notes` (the notes of a record; notes are read through their parent record) |
 | Messages | `list_record_messages`, `get_message` (read the e-mails and SMS sent from a record) |
 | Users | `list_users`, `get_user` (read only — MCP never edits users) |
 | Documents | `list_document_templates`, `generate_document` (PDF, optionally saved to the record) |
@@ -183,7 +184,7 @@ The template tools **prepare templates** — they do not send SMS or e-mail. Mes
 ### 🛠️ Configuration tools
 
 Companies that want the assistant to help **configure the CRM** can ask InflowCRM to enable the configuration tools.
-They add **19 tools** (up to **61** in total):
+They add **19 tools** (up to **62** in total):
 
 | Capability | Tools |
 |---|---|
@@ -203,6 +204,9 @@ Configuration changes apply to **every user of the company** at once.
 
 Exposed modules: `customer`, `contact`, `task`, `note`, `order`, `potential`, `event`, `enlist`, `coach`, `room` —
 limited to the modules of your company's plan. `list_modules` returns them with the names your company configured.
+`note` is special: notes are not searchable, counted or sampled — you read them with `list_record_notes` on the
+record they belong to, and a note is visible only through a parent record you can see
+(see [Notes](tools.md#notes)).
 
 As in the REST API, **only fields with an Api field name** can be read, filtered and written over MCP. Give a field an Api field name in
 the field settings to make it readable and writable by the assistant.
@@ -240,7 +244,7 @@ below explains. Every tool belongs to a scope:
 | Scope | Tools |
 |---|---|
 | *(always)* | `list_modules`, `whoami` |
-| `records:read` | `get_module_fields`, `get_sample_record`, `search_records`, `find_record`, `count_records`, `get_record`, `get_records_by_ids`, `get_pipeline_summary` |
+| `records:read` | `get_module_fields`, `get_sample_record`, `search_records`, `find_record`, `count_records`, `get_record`, `get_records_by_ids`, `list_record_notes`, `get_pipeline_summary` |
 | `records:write` | `create_record`, `create_records`, `update_record`, `update_records` |
 | `records:delete` | `delete_record` |
 | `files:read` | `list_record_files`, `download_file` |
@@ -266,6 +270,8 @@ below explains. Every tool belongs to a scope:
   users, pipelines or templates behave as "not found".
 - **Record permissions** — the same visibility rules as the CRM and the REST API; a signed-in user sees what their
   role allows.
+- **Notes follow their parent record** — a note is visible only when you can see a record it belongs to. A note with
+  no existing parent is invisible to everyone, administrators and API keys included.
 - **Strict input** — unknown arguments are rejected; unknown field, filter and sort names are rejected with the list of
   valid ones; values are
   validated against the field type (pick list, number, date, e-mail, rating, length, required).
@@ -313,6 +319,8 @@ The request limit returns HTTP `429`; the per-tool limits return a tool error su
 | Users per `add_users_to_squad` / `remove_users_from_squad` | 50 |
 | Messages per `list_record_messages` page | 50 (default 20); `offset` up to 500 |
 | Message reads (`list_record_messages`, `get_message`) | 120 per 5 minutes |
+| Notes per `list_record_notes` page | 50 (default 20); `offset` up to 500 |
+| Note reads (`list_record_notes`) | 120 per 5 minutes |
 | Files per write | 10, each ≤ 5 MB decoded; whole request ≤ 7 MB (≈ 5 MB of files in total) |
 | `download_file` / `generate_document` | ≤ 5 MB per file |
 | Filter conditions | 20 per `advancedFilter` |
