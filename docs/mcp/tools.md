@@ -207,7 +207,8 @@ processed independently.
   the whole call is refused before any item runs:
   `PERMISSION_DENIED: Your CRM role does not allow bulk import on module '<module>'. Call create_record one record at a time instead.`
   (`bulk edit` and `update_record` for `update_records`). Creating or updating the records one by one still works with
-  the single-record right — but not without asking the user first. Administrators and API keys are not affected.
+  the single-record right — but not without asking the user first. Administrators and integration-user API keys are
+  not affected; an API key of an employee account is checked against that employee's role.
 
 ### `delete_record`
 Moves a record to the CRM trash. → `{ id, deleted: true }`
@@ -256,8 +257,8 @@ keys are not affected.)
   that names one — `create_record`, `update_record`, each item of the bulk tools, a relation set to a record, to `null`
   or to `[]` — is refused with
   `PERMISSION_DENIED: Your CRM role cannot edit the field(s) <names> of module '<module>'. The record was not changed; tell the user to ask their CRM administrator for edit access.`
-  This applies **when creating** a record too. The default value of a read-only field is not filled in (the CRM drops
-  it the same way); leaving the field out never causes a refusal.
+  This applies **when creating** a record too. A read-only field's default value is dropped by the CRM as well, so the
+  field stays empty; leaving the field out never causes a refusal.
 - **Owner:** when the role cannot edit the owner field, an explicit owner in `data` is refused with the same
   `PERMISSION_DENIED`; leave `owner` out and the record belongs to the employee. When the role may edit it, an
   employee with the "own records only" right may still create a record for someone else or hand a record over.
@@ -605,8 +606,8 @@ change an administrator or an API key makes applies to **all users of the compan
 - Creates, updates and deletes of fields, list views, roles and squads share one limit: **30 calls per 5 minutes**
   (`Too many configuration changes, retry in N s.`).
 - `update_field`, `delete_field`, `create_list_view`, `update_list_view`, `delete_list_view`, `create_role`,
-  `update_role`, `delete_role`, `delete_squad`, `add_users_to_squad` and `remove_users_from_squad` require `confirm: true` (exactly the boolean `true`) — send it only after the user agreed.
-  For several changes, ask once for the whole batch.
+  `update_role`, `delete_role`, `delete_squad`, `add_users_to_squad` and `remove_users_from_squad` require `confirm: true` (exactly the boolean `true`) — send it only after the user agreed. A signed-in employee's
+  own list views need no `confirm` (see below). For several changes, ask once for the whole batch.
 - Ids of other companies or deleted items → `RESOURCE_NOT_FOUND: … does not exist.` with the tool to call next.
 - Deletes are soft: the item disappears from the CRM, stored record values are kept.
 
@@ -731,8 +732,8 @@ All saved list views of the company, whoever may see them.
 
 An employee **signed in with OAuth** whose CRM role may use saved list views (`see`, `create`, `modify`, `delete` on
 lists) gets `get_list_views`, `create_list_view`, `update_list_view` and `delete_list_view` for views that are
-**theirs alone**. An API key — one tied to an employee account too — never gets this employee variant; with the
-configuration tools enabled it gets the administrator tools below, as before.
+**theirs alone**. An API key never gets this employee variant. An administrator's or integration user's key gets the
+administrator tools below when the configuration tools are enabled; an employee's key gets no configuration tools at all.
 Each tool appears only when the role allows what it does (see
 [Tools depend on the role](#tools-depend-on-the-role)). Needs the `lists:read` / `lists:write` scopes.
 
