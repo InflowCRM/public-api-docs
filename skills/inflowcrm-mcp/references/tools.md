@@ -451,15 +451,16 @@ One e-mail or SMS with its text and, for e-mails, the sender name and the names 
 ### `list_users`
 Active users of the company: `id`, `systemLabel` (name), `email`, `userType`, `role` and other fields with Api field
 names. Use the ids to set `owner` or user relations. `userType` is `admin`, `member` or `integration` (the same labels
-as in `whoami`) — it is also given to a signed-in employee. `role` is `{ id, name }`, or `null` when the user has no
-valid role; it is left out for a signed-in employee. **`role: null` on an `admin` is by design**: administrators hold
+as in `whoami`); it is returned only to an administrator (an administrator's API key or an administrator signed in with
+OAuth) — a signed-in employee does not get it. `role` is `{ id, name }`, or `null` when the user has no valid role; it
+is left out for a signed-in employee. **`role: null` on an `admin` is by design**: administrators hold
 every right and need no CRM role, so it is not a missing configuration. No passwords or API keys are ever returned. A signed-in employee sees the users and
 fields the CRM's user list shows them (no hidden fields) and, of the system fields, only `id` — no `createdTime`,
 `modifiedTime`, `createdBy` or `modifiedBy`.
 
 ### `get_user`
 - **Input:** `{ userId }` — answers like one `list_users` item, with `userType` and `role` (`{ id, name }` or `null`;
-  `null` is normal for an `admin`) unless the caller is an employee, who gets `userType` but no `role`.
+  `null` is normal for an `admin`) — both only for an administrator; a signed-in employee gets neither.
 - REST (`/api/getUserList`) is unchanged: it does not return `userType`.
 
 ---
