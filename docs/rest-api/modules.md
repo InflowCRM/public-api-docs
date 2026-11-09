@@ -38,9 +38,9 @@ Common field types:
 | string      | Text field                         | "John Doe"           |
 | number      | Numeric value                      | 42                   |
 | boolean     | True/false                         | true                 |
-| date        | ISO 8601 date string               | "2025-07-07"         |
+| date        | ISO 8601 date string; a day that does not exist (`2026-02-30`) is rejected with 400 | "2025-07-07"         |
 | picklist    | One of allowed values              | "active"             |
-| multi-pick  | Array of allowed values            | ["a", "b"]           |
+| multi-pick  | Array of allowed values (a single value replaces the list: `"a"` → `["a"]`; `""`/`null` empties it) | ["a", "b"]           |
 | file        | File upload (see file-uploads.md)  | (file)               |
 | relation    | Reference to another module record | "507f1f77bcf86cd799439011" |
 

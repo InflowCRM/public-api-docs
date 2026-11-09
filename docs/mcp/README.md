@@ -21,7 +21,7 @@ There are two ways to connect. Both use the same address and the same tools.
 | | Sign in with your CRM account (OAuth) | API key |
 |---|---|---|
 | Best for | claude.ai, ChatGPT, Gemini, Claude Desktop connectors — and Claude Code, Gemini CLI | Claude Code, Gemini CLI, Codex, Cursor, VS Code, n8n, scripts, your own agents |
-| Who connects | A company administrator (employees: coming soon — see *Who can sign in* below) | Anyone holding the key of an integration user |
+| Who connects | A company administrator, or an employee when InflowCRM has enabled it for your company (see *Who can sign in* below) | Anyone holding the key of an integration user |
 | Acts as | The signed-in user, with their rights | The integration user (full rights in your company's data) |
 | Setup | Add a custom connector with the URL, sign in on your company's CRM page, allow access | Send the key in the `Authorization` header |
 
@@ -74,7 +74,7 @@ How signing in works:
 
 1. In your AI app, add the connector with the URL `https://mcp.inflowcrm.pl` and click **Connect**.
 2. A page *"Połącz aplikację AI z InflowCRM"* asks for **your CRM address** — the one you log in at, e.g.
-   `firma.inflowstore.pl`.
+   `firma.inflowstore.pl`. Capital letters do not matter: `Firma.inflowstore.pl` finds the same company.
 3. You are sent to your company's CRM. Log in if needed. The consent screen shows which app asks for access, the
    address it will return to, your account and your company.
 4. Click **allow**. The app is connected; from now on the assistant works **as you, with your rights**.
@@ -87,12 +87,15 @@ renewed automatically for up to 30 days of inactivity).
 | Account | Can sign in |
 |---|---|
 | Company administrator | **Yes**, whenever MCP is enabled for the company |
-| Employee (regular CRM user with a role) | **Not yet** — coming soon, within the permissions of their own role |
+| Employee (regular CRM user with a role) | **Yes, when InflowCRM has enabled MCP for employees of your company** — within the permissions of their own role |
 | Integration user | No — integration users connect with their API key |
 
-**For now MCP is available to company administrators only.** An employee who tries to connect sees *"To konto nie może łączyć aplikacji AI z CRM.
+**Employees need an extra switch.** MCP for employees is switched on per company by InflowCRM, on top of MCP itself.
+Until it is on, an employee who tries to connect sees *"To konto nie może łączyć aplikacji AI z CRM.
 Skontaktuj się z administratorem firmy."* (This account cannot connect AI apps to the CRM — contact your company
-administrator.) We will soon add an option that lets employees use MCP within the permissions of their own CRM role.
+administrator.) Once it is on, an employee must have a role; the assistant then works **within that role**: it sees only
+the modules, records and fields the role allows, and its tool list follows the role (see
+[Tools depend on the role](tools.md#tools-depend-on-the-role)).
 
 What a signed-in connection may do:
 
@@ -161,7 +164,7 @@ Tool results come back as JSON text in `result.content[0].text`; failures set `r
 
 ## 🧰 What the assistant can do
 
-Up to **42 tools** (depending on your plan and rights), grouped by capability (full reference:
+Up to **43 tools** (depending on your plan and rights), grouped by capability (full reference:
 **[MCP Tools](tools.md)**):
 
 | Capability | Tools |
@@ -171,6 +174,7 @@ Up to **42 tools** (depending on your plan and rights), grouped by capability (f
 | Write records | `create_record`, `update_record`, `create_records` / `update_records` (bulk, up to 50), `delete_record` (to trash) |
 | Pipelines | `get_pipelines`, `get_pipeline_summary` (records and value per stage) |
 | Files | `list_record_files`, `download_file`, upload via `create_record` / `update_record` |
+| Notes | `list_record_notes` (the notes of a record; notes are read through their parent record) |
 | Messages | `list_record_messages`, `get_message` (read the e-mails and SMS sent from a record) |
 | Users | `list_users`, `get_user` (read only — MCP never edits users) |
 | Documents | `list_document_templates`, `generate_document` (PDF, optionally saved to the record) |
@@ -183,7 +187,7 @@ The template tools **prepare templates** — they do not send SMS or e-mail. Mes
 ### 🛠️ Configuration tools
 
 Companies that want the assistant to help **configure the CRM** can ask InflowCRM to enable the configuration tools.
-They add **19 tools** (up to **61** in total):
+They add **19 tools** (up to **62** in total):
 
 | Capability | Tools |
 |---|---|
@@ -195,14 +199,27 @@ They add **19 tools** (up to **61** in total):
 They are available only to a **company administrator** (signed in) or an **API key**.
 Configuration changes apply to **every user of the company** at once.
 
+**Exception:** an **employee signed in with OAuth** gets the four list view tools (`get_list_views`, `create_list_view`,
+`update_list_view`, `delete_list_view`) for their own **private** views — no sharing, no `confirm`, only views they
+own — whether or not the configuration tools are enabled for the company. API keys (an employee's included) do not get
+them. See
+[Your own list views](tools.md#your-own-list-views-signed-in-employees).
+
 ### Which tools you see
 
 - Tools your plan, the enabled features or your account do not allow are **not on the tool list** at all.
+- For an employee **signed in with OAuth** the list also follows the CRM role: a tool the role has no right for is not
+  listed (see [Tools depend on the role](tools.md#tools-depend-on-the-role)). Administrators and API keys see the full
+  list.
+  `whoami` returns `effectiveRights` per module.
 - After InflowCRM enables a feature for your company, **reconnect** the AI app (or start a new chat) to see the new
   tools.
 
 Exposed modules: `customer`, `contact`, `task`, `note`, `order`, `potential`, `event`, `enlist`, `coach`, `room` —
 limited to the modules of your company's plan. `list_modules` returns them with the names your company configured.
+`note` is special: notes are not searchable, counted or sampled — you read them with `list_record_notes` on the
+record they belong to, and a note is visible only through a parent record you can see
+(see [Notes](tools.md#notes)).
 
 As in the REST API, **only fields with an Api field name** can be read, filtered and written over MCP. Give a field an Api field name in
 the field settings to make it readable and writable by the assistant.
@@ -220,7 +237,7 @@ Tools that delete or change sensitive configuration refuse to run until the assi
 | `delete_sms_template`, `delete_email_template`, `delete_document_template` | Always |
 | `update_sms_template`, `update_email_template` | When the template sends automatically and its content changes |
 | `update_document_template` | When the document is attached to an automatically sent template and its content changes |
-| `update_field`, `delete_field`, `create_list_view`, `update_list_view`, `delete_list_view`, `create_role`, `update_role`, `delete_role` | Always |
+| `update_field`, `delete_field`, `create_list_view`, `update_list_view`, `delete_list_view`, `create_role`, `update_role`, `delete_role` | Always — except the list-view tools for a signed-in employee working on their own private views, which need no `confirm` |
 | `delete_squad`, `add_users_to_squad`, `remove_users_from_squad` | Always |
 
 The assistant is told to set `confirm: true` only after **you** agreed in the conversation, and to ask once for a
@@ -241,7 +258,7 @@ below explains. Every tool belongs to a scope:
 | Scope | Tools |
 |---|---|
 | *(always)* | `list_modules`, `whoami` |
-| `records:read` | `get_module_fields`, `get_sample_record`, `search_records`, `find_record`, `count_records`, `get_record`, `get_records_by_ids`, `get_pipeline_summary` |
+| `records:read` | `get_module_fields`, `get_sample_record`, `search_records`, `find_record`, `count_records`, `get_record`, `get_records_by_ids`, `list_record_notes`, `get_pipeline_summary` |
 | `records:write` | `create_record`, `create_records`, `update_record`, `update_records` |
 | `records:delete` | `delete_record` |
 | `files:read` | `list_record_files`, `download_file` |
@@ -259,7 +276,8 @@ below explains. Every tool belongs to a scope:
 
 > **Today every API key receives all scopes**. Per-key scopes
 > are planned. Until then, restrict tools in your MCP client as shown above. The `fields:`, `lists:`, `roles:` and
-> `squads:` tools additionally need the configuration tools enabled for the company.
+> `squads:` tools additionally need the configuration tools enabled for the company — except the list view tools of a
+> employee signed in with OAuth (own private views).
 
 ### Built-in safeguards
 
@@ -267,6 +285,8 @@ below explains. Every tool belongs to a scope:
   users, pipelines or templates behave as "not found".
 - **Record permissions** — the same visibility rules as the CRM and the REST API; a signed-in user sees what their
   role allows.
+- **Notes follow their parent record** — a note is visible only when you can see a record it belongs to. A note with
+  no existing parent is invisible to everyone, administrators and API keys included.
 - **Strict input** — unknown arguments are rejected; unknown field, filter and sort names are rejected with the list of
   valid ones; values are
   validated against the field type (pick list, number, date, e-mail, rating, length, required).
@@ -314,6 +334,8 @@ The request limit returns HTTP `429`; the per-tool limits return a tool error su
 | Users per `add_users_to_squad` / `remove_users_from_squad` | 50 |
 | Messages per `list_record_messages` page | 50 (default 20); `offset` up to 500 |
 | Message reads (`list_record_messages`, `get_message`) | 120 per 5 minutes |
+| Notes per `list_record_notes` page | 50 (default 20); `offset` up to 500 |
+| Note reads (`list_record_notes`) | 120 per 5 minutes |
 | Files per write | 10, each ≤ 5 MB decoded; whole request ≤ 7 MB (≈ 5 MB of files in total) |
 | `download_file` / `generate_document` | ≤ 5 MB per file |
 | Filter conditions | 20 per `advancedFilter` |
@@ -332,14 +354,19 @@ what was wrong and which tool to call next. Messages never contain stack traces.
 
 | Prefix | Meaning |
 |---|---|
-| `VALIDATION_ERROR:` | Bad input (wrong type, invalid NIP checksum, `query` rules…) |
+| `VALIDATION_ERROR:` | Bad input (wrong type, invalid NIP checksum, unknown field, unknown template tag, `query` rules…) — MCP tools start such a message with it, a bulk item's `error` too |
 | `RESOURCE_NOT_FOUND:` | Record, file, user, pipeline, template, field, list view or role not found (also for other companies' ids) |
 | `CONFLICT:` | The change clashes with the current state (e.g. a role that still has users, a name already taken) |
 | `FORBIDDEN:` / `UNAUTHORIZED:` / `PERMISSION_DENIED:` | The user behind the connection (their role) may not perform the operation |
 | `INTERNAL_ERROR:` | Server-side failure — retry later |
 
-Many validation messages have no prefix, e.g. `Unknown field(s) in \`data\`: foo. Valid fields: …`,
-`Field 'status' (Status) must be one of: …`, `Missing required field(s): …`.
+The validation prefix is added in one place for all tools, so a message reads e.g.
+`VALIDATION_ERROR: Unknown field(s) in \`data\`: foo. Valid fields: …`. A refusal that is not a validation problem
+(for example a change to an automatically sent template without `confirm`) keeps its own text.
+
+When a call fails, the answer carries a second text block `Reference: <id>. If you cannot resolve this, report it with
+report_problem (errorRefs).` For a bulk call that failed only partly (some items `ok: false`) the reference is there
+too — the answer is not an error, but the failed items can be reported with it.
 
 A call without a required `confirm: true` is refused before anything changes — either as invalid arguments or with
 a message such as `This template is sent automatically (autoSending.enabled). Show the new text to the user and call

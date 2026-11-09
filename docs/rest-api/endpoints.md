@@ -352,6 +352,25 @@ curl -X PATCH "https://srv.inflowcrm.pl/api/updateRecord/RECORD_ID" \
 }
 ```
 
+### Data written through the API
+
+These rules apply to `createRecord` and `updateRecord`, and to the n8n, Zapier and Make integrations that write through
+the same path.
+
+- **A day that does not exist is rejected.** A value for a Date, Datetime or DateRange field such as `2026-02-30`,
+  `2026-04-31` or `2027-02-29` (not a leap year) — also `02/30/2026` or `2026.02.30`, also inside a DateRange array —
+  returns **HTTP 400** with `VALIDATION_ERROR`. Earlier it was moved to the next month (`2026-03-02`). Valid dates are
+  stored exactly as before. A value that is not a date at all (e.g. `"TBD"`) behaves as before.
+- **Multi-value fields** (MultiPicklist, MultiEmail, MultiPhone): a single value **replaces** the whole list
+  (`"a"` is stored as `["a"]`); `""` or `null` empties the field; an object or a boolean returns 400. On MultiEmail and
+  MultiPhone a single string becomes a one-item list and is **not split on commas**: `"a@x.pl, b@y.pl"` is stored as one
+  item — to save several addresses send an array (`["a@x.pl", "b@y.pl"]`). The REST API does not check the format of an
+  e-mail address or phone number (as before). Earlier `updateRecord` could corrupt the list.
+- **Single relation:** `""` clears the relation, like `null` (earlier it returned an error).
+- **Unchanged:** the MCP-only additions (`allowNewItems` in field lists, `userType` on users, `warnings` on list views,
+  `templatesUsingField`) do not exist in the REST API; `getModuleFields`, `getUserList` and the REST error responses
+  are the same as before.
+
 ---
 
 ## POST /api/searchRecords
@@ -699,7 +718,8 @@ Returns metadata for all fields in a module.
 
 `block` is the form block the field sits in (the same label can repeat in two blocks), `hidden` tells whether the
 field is hidden in the CRM forms (hidden fields are still listed and accepted on write), and `decimals` is the number
-of decimal places (`decimal` carries the same value). `defaultValue` is the value a new record gets in the CRM form.
+of decimal places (`decimal` carries the same value). `defaultValue` is the value a new record gets in the CRM form;
+`false` appears only for a checkbox field, any other field without a default has `null`.
 
 **Headers:**  
 `x-api-key: YOUR_API_KEY`
