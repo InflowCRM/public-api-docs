@@ -237,7 +237,8 @@ Tools that delete or change sensitive configuration refuse to run until the assi
 | `delete_sms_template`, `delete_email_template`, `delete_document_template` | Always |
 | `update_sms_template`, `update_email_template` | When the template sends automatically and its content changes |
 | `update_document_template` | When the document is attached to an automatically sent template and its content changes |
-| `delete_field`, `delete_list_view`, `delete_role`, `update_role` | Always — except `delete_list_view` for a signed-in employee deleting their own private view, which needs no `confirm` |
+| `update_field`, `delete_field`, `create_list_view`, `update_list_view`, `delete_list_view`, `create_role`, `update_role`, `delete_role` | Always — except the list-view tools for a signed-in employee working on their own private views, which need no `confirm` |
+| `delete_squad`, `add_users_to_squad`, `remove_users_from_squad` | Always |
 
 The assistant is told to set `confirm: true` only after **you** agreed in the conversation, and to ask once for a
 whole batch (listing every item), not once per item. `confirm` is set by the model, though — the confirmation that

@@ -181,6 +181,8 @@ tools an employee has follow their role — a missing tool means the role does n
   (`{ id, name }`).
 - **Squads:** `list_squads` first. Adding or removing members changes which records those users see (`seeSquad`), so
   list the change and ask once; `add_users_to_squad` / `remove_users_from_squad` / `delete_squad` need `confirm: true`.
+- `update_field`, `create_list_view`, `update_list_view`, `create_role` and every delete of a field, list view or
+  role also need `confirm: true` after the user agreed.
 - Configuration writes are limited to 30 per 5 minutes (all kinds together).
 
 ## 8. Errors

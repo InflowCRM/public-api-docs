@@ -228,8 +228,7 @@ Moves a record to the CRM trash. → `{ id, deleted: true }`
 - **Defaults on create:** `create_record` and `create_records` fill a field you did not send with its `defaultValue`
   (from `get_module_fields`), as the CRM form does. Send `null` or `""` to leave a field empty on purpose. Relations,
   files, the owner and pipeline stage fields get no default, and neither do fields the connected user may not see.
-- **Dates without a time:** a date without a time (`2026-05-10`) written to a Date field (or to a DateTime field that is
-  shown without an hour) is stored as midnight in Europe/Warsaw, so reading it back gives the same day. This applies to MCP writes only; the REST API stores such a
+- **Dates without a time:** a date without a time (`2026-05-10`) written to a Date or DateTime field is stored as midnight in Europe/Warsaw, so reading it back gives the same day. This applies to MCP writes only; the REST API stores such a
   value as `00:00Z`.
 - **Relations** take a record id (multi-relations an array of ids); `null` or `""` clears the relation. Ids of
   records that do not exist in your company are rejected.
@@ -403,7 +402,7 @@ e-mails are not included, and neither are messages sent from related records (li
 
 - **Input:** `{ module, recordId, limit? (1–50, default 20), offset? (0–500, default 0) }`
 - **Output:** `{ messages: [{ id, type, status, createdTime, sentAt, deliveredAt, errorCode, to, … }], limit, offset, hasMore, pagingLimitReached?, unavailableTypes? }`
-  — e-mails also carry `subject`, `cc`, `bcc` and `senderName`; pass a message's `id` and `type` to `get_message`.
+  — e-mails also carry `subject`, `cc` and `bcc`, SMS messages `senderName`; pass a message's `id` and `type` to `get_message`.
   - `hasMore`: more reachable messages exist. `offset` stops at 500: to read further, call again with `offset: 500`
     and a larger `limit`. `pagingLimitReached: true`: more messages exist beyond what any `offset` and `limit` reach.
   - `unavailableTypes` (`email` / `sms`): the user's role may not see that type, so its absence from the list says
@@ -605,8 +604,8 @@ change an administrator or an API key makes applies to **all users of the compan
 
 - Creates, updates and deletes of fields, list views, roles and squads share one limit: **30 calls per 5 minutes**
   (`Too many configuration changes, retry in N s.`).
-- `delete_field`, `delete_list_view`, `update_role`, `delete_role`, `delete_squad`, `add_users_to_squad` and
-  `remove_users_from_squad` require `confirm: true` (exactly the boolean `true`) — send it only after the user agreed.
+- `update_field`, `delete_field`, `create_list_view`, `update_list_view`, `delete_list_view`, `create_role`,
+  `update_role`, `delete_role`, `delete_squad`, `add_users_to_squad` and `remove_users_from_squad` require `confirm: true` (exactly the boolean `true`) — send it only after the user agreed.
   For several changes, ask once for the whole batch.
 - Ids of other companies or deleted items → `RESOURCE_NOT_FOUND: … does not exist.` with the tool to call next.
 - Deletes are soft: the item disappears from the CRM, stored record values are kept.
@@ -651,7 +650,7 @@ Adds a custom field. Its type and Api field name cannot be changed later.
 #### `update_field`
 Changes one field. Send only what changes.
 
-- **Input:** `{ module, fieldId, label?, description?, required?, hidden?, pickListValues?, addPickListValues?, removePickListValues?, pickListColors?, allowNewItems?, defaultValue?, length?, decimals?, maxRating?, showInList?, showInCreateForm? }`
+- **Input:** `{ module, fieldId, label?, description?, required?, hidden?, pickListValues?, addPickListValues?, removePickListValues?, pickListColors?, allowNewItems?, defaultValue?, length?, decimals?, maxRating?, showInList?, showInCreateForm?, confirm: true }`
 - **Pick lists:** either `pickListValues` (the full new list) **or** `addPickListValues` / `removePickListValues`, not
   both. A pick list keeps at least one value. Colors are merged; `""` clears a color.
 - **Removing a value never changes records:** the answer lists `removedPickListValues: [{ value, recordsStillUsing }]`
@@ -695,6 +694,7 @@ All saved list views of the company, whoever may see them.
 | `public` | boolean | default `false` |
 | `roleIds`, `userIds`, `squadIds` | string[] | who sees the view (≤ 100 each) |
 | `visibleAsButton` | boolean | default `false` |
+| `confirm` | boolean | required, `true` |
 
 - **Audience:** a view must be `public: true` or name at least one role, user or squad.
 - **Operators by field type:**
@@ -720,7 +720,7 @@ All saved list views of the company, whoever may see them.
 - **Output:** the created view. Name taken → `CONFLICT: A list view named '…' already exists in module '…'…`
 
 #### `update_list_view`
-- **Input:** `{ listId, name?, columns?, conditions?, sorting?, public?, roleIds?, userIds?, squadIds?, visibleAsButton? }`
+- **Input:** `{ listId, name?, columns?, conditions?, sorting?, public?, roleIds?, userIds?, squadIds?, visibleAsButton?, confirm: true }`
 - A property you send **replaces** the stored one entirely — read the view first and send the full new value.
   `conditions: {}` clears the filter, `sorting: null` removes the sort. The module cannot change.
 
@@ -764,7 +764,7 @@ Each tool appears only when the role allows what it does (see
   `customPermissions` and are changed there.
 
 #### `create_role`
-- **Input:** `{ name, copyFromRoleId?, modules?, customPermissions? }` — `name` unique; without `copyFromRoleId` the
+- **Input:** `{ name, confirm: true, copyFromRoleId?, modules?, customPermissions? }` — `name` unique; without `copyFromRoleId` the
   role starts from the CRM defaults, with it from a copy of that role (including its field rules).
 - `modules`: `[{ module, <right>: true | false, … }]`, each module once; `customPermissions`: e.g.
   `canSendEmail`, `canSendSms`, `canSeeEmail` (`none` | `see` | `seeSquad` | `seeOthers`), `canEditEmailTemplate`
