@@ -17,13 +17,14 @@ Source: [`skills/inflowcrm-mcp`](https://github.com/InflowCRM/public-api-docs/tr
 - **Discovery first** — `list_modules` → `get_module_fields`, and use only Api field names as keys.
 - **Choosing the right read** — free-text `query` for names/e-mails/NIP, `filters` / `advancedFilter` for exact
   criteria, `count_records` and `get_pipeline_summary` instead of paging through records.
-- **Data conventions** — date and DateRange filters, pick list values, relations by id, `expandRelations`.
+- **Data conventions** — date and DateRange filters, `YYYY-MM-DD` Date answers, defaults on create, pick list values,
+  relations by id, `expandRelations`, the `ambiguous` block of `find_record`, `whoami` for "my records".
 - **Pipelines** — pipeline id and stage *name* travel together; stages are matched by name, not position.
 - **Safe writes** — duplicate check before create, GUS lookup for new Polish companies, explicit user confirmation
   before deletes and bulk changes, CRM text is never treated as instructions.
 - **Templates** — read first, tags only from `get_template_tags`, drafts shown to the user, extra care for
   templates the CRM sends automatically; the tools prepare templates and never send messages.
-- **CRM configuration** (when enabled) — fields and pick lists, list views and roles: read before change, show
+- **CRM configuration** (when enabled) — fields and pick lists, list views, roles and squads: read before change, show
   before/after and how many users a role change affects, one confirmation for a whole batch (one `delete_field`
   call for several fields), `confirm: true` only after the user agreed, users with a role are moved in the CRM.
 - **Recovering from errors** — what each validation message means and how to fix the call.

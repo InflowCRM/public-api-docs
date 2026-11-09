@@ -1292,6 +1292,20 @@ components:
           nullable: true
           description: Number of decimal places for numeric fields
           example: 2
+        decimals:
+          type: integer
+          nullable: true
+          description: Same value as `decimal`
+          example: 2
+        block:
+          type: string
+          nullable: true
+          description: Name of the form block the field belongs to (the same label can repeat in two blocks)
+          example: "Basic information"
+        hidden:
+          type: boolean
+          description: Whether the field is hidden in the CRM forms (hidden fields are still listed and accepted on write)
+          example: false
         length:
           type: integer
           nullable: true
