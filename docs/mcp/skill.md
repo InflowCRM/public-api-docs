@@ -18,7 +18,8 @@ Source: [`skills/inflowcrm-mcp`](https://github.com/InflowCRM/public-api-docs/tr
 - **Choosing the right read** — free-text `query` for names/e-mails/NIP, `filters` / `advancedFilter` for exact
   criteria, `count_records` and `get_pipeline_summary` instead of paging through records.
 - **Data conventions** — date and DateRange filters, `YYYY-MM-DD` Date answers, dates that must exist, defaults on
-  create, pick list values, multi-value fields always as an array, relations by id, `expandRelations`, the `ambiguous`
+  create, pick list values (`allowNewItems` checked before a value outside the list), multi-value fields always as an
+  array, no repeated `recordId` in one `update_records` call, relations by id, `expandRelations`, the `ambiguous`
   block of `find_record`, `whoami` for "my records".
 - **Notes and roles** — notes only through `list_record_notes` on the parent record, a note needs a parent; for a
   signed-in employee `effectiveRights` and the `access` of each field before writing, no workaround for `PERMISSION_DENIED`
@@ -31,7 +32,9 @@ Source: [`skills/inflowcrm-mcp`](https://github.com/InflowCRM/public-api-docs/tr
   templates the CRM sends automatically; the tools prepare templates and never send messages.
 - **CRM configuration** (when enabled) — fields and pick lists, list views, roles and squads: read before change, show
   before/after and how many users a role change affects, role rights that depend on each other (refused, not
-  corrected) and `warnings` checked before a role is copied, one confirmation for a whole batch (one `delete_field`
+  corrected) and `warnings` checked before a role is copied, `warnings` of a saved list view read (a pick-list value
+  outside the list is saved, not refused), `templatesUsingField` of `delete_field` reported (it comes after the
+  delete and may over-count), one confirmation for a whole batch (one `delete_field`
   call for several fields), `confirm: true` only after the user agreed, users with a role are moved in the CRM.
 - **Recovering from errors** — what each validation message means and how to fix the call.
 
