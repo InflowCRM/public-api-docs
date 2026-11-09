@@ -13,7 +13,7 @@ The InflowCRM MCP server works with AI tools that can connect to a **remote MCP 
 MCP must be enabled for your company first; for the API key route you also need an integration user's key — see
 [MCP Server → Quick start](README.md).
 
-> **For now MCP is available to company administrators only.** Employees cannot connect yet. We will soon add an option that lets employees use MCP within the permissions of their own CRM role.
+> MCP is available to company administrators. **Employees** can connect too once InflowCRM has enabled MCP for employees of your company — they work within the permissions of their own CRM role (see [Who can sign in](README.md#who-can-sign-in)).
 
 > Keep the key out of files you commit. Where a tool can read it from an environment variable, use
 > `INFLOWCRM_API_KEY`.
@@ -229,10 +229,11 @@ plans a team admin may have to set up connectors first.
 
 ## Limit what each person can do
 
-**For now MCP is available to company administrators only**, so there is no separate access per employee yet.
-We will soon add an option that lets employees use MCP within the permissions of their own CRM role.
+A signed-in **employee** (when InflowCRM has enabled MCP for employees of your company) works **within the permissions
+of their own CRM role**: records, fields and the tool list follow the role, and the assistant cannot go beyond it. To
+limit a person, set their role in the CRM.
 
-Until then:
+For administrators and API keys, which have no such limit:
 
 | You want | Use | Who enforces it |
 |---|---|---|

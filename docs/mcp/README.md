@@ -21,7 +21,7 @@ There are two ways to connect. Both use the same address and the same tools.
 | | Sign in with your CRM account (OAuth) | API key |
 |---|---|---|
 | Best for | claude.ai, ChatGPT, Gemini, Claude Desktop connectors — and Claude Code, Gemini CLI | Claude Code, Gemini CLI, Codex, Cursor, VS Code, n8n, scripts, your own agents |
-| Who connects | A company administrator (employees: coming soon — see *Who can sign in* below) | Anyone holding the key of an integration user |
+| Who connects | A company administrator, or an employee when InflowCRM has enabled it for your company (see *Who can sign in* below) | Anyone holding the key of an integration user |
 | Acts as | The signed-in user, with their rights | The integration user (full rights in your company's data) |
 | Setup | Add a custom connector with the URL, sign in on your company's CRM page, allow access | Send the key in the `Authorization` header |
 
@@ -87,12 +87,15 @@ renewed automatically for up to 30 days of inactivity).
 | Account | Can sign in |
 |---|---|
 | Company administrator | **Yes**, whenever MCP is enabled for the company |
-| Employee (regular CRM user with a role) | **Not yet** — coming soon, within the permissions of their own role |
+| Employee (regular CRM user with a role) | **Yes, when InflowCRM has enabled MCP for employees of your company** — within the permissions of their own role |
 | Integration user | No — integration users connect with their API key |
 
-**For now MCP is available to company administrators only.** An employee who tries to connect sees *"To konto nie może łączyć aplikacji AI z CRM.
+**Employees need an extra switch.** MCP for employees is switched on per company by InflowCRM, on top of MCP itself.
+Until it is on, an employee who tries to connect sees *"To konto nie może łączyć aplikacji AI z CRM.
 Skontaktuj się z administratorem firmy."* (This account cannot connect AI apps to the CRM — contact your company
-administrator.) We will soon add an option that lets employees use MCP within the permissions of their own CRM role.
+administrator.) Once it is on, an employee must have a role; the assistant then works **within that role**: it sees only
+the modules, records and fields the role allows, and its tool list follows the role (see
+[Tools depend on the role](tools.md#tools-depend-on-the-role)).
 
 What a signed-in connection may do:
 

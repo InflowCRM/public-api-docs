@@ -43,8 +43,9 @@ Apps that support only SSE cannot connect.
 
 ### "To konto nie może łączyć aplikacji AI z CRM. Skontaktuj się z administratorem firmy."
 
-*(This account cannot connect AI apps to the CRM.)* For now MCP is available to company administrators only.
-We will soon add an option that lets employees use MCP within the permissions of their own CRM role.
+*(This account cannot connect AI apps to the CRM.)* An employee sees this when MCP for employees is not enabled for the
+company yet, or when the employee has no role. [Ask InflowCRM](../contact.md) to enable MCP for employees; the
+assistant then works within the permissions of the employee's own CRM role. Integration users connect with their API key.
 
 ### "Ten link wygasł. Wróć do aplikacji i połącz się jeszcze raz."
 
