@@ -550,8 +550,9 @@ Official name and address of a Polish company from the GUS (REGON) registry.
 ## Configuration tools
 
 Fields, saved list views, roles and squads — **only when InflowCRM has enabled the configuration tools for your company**, and
-only for a company administrator (signed in) or an API key; an employee never gets them. Every change applies to
-**all users of the company** at once.
+only for a company administrator (signed in) or an API key. A signed-in employee does not get them, with one exception:
+the four [list view tools](#saved-list-views), which work for the employee's **own private views** (below). Every
+change an administrator or an API key makes applies to **all users of the company** at once.
 
 **Common rules**
 
@@ -625,6 +626,10 @@ call. The fields disappear from forms and lists, records keep their values, and 
 
 ### Saved list views
 
+> **Signed-in employees** get these four tools too, in a restricted form that needs no configuration tools: they manage
+> only their **own private views** — see [Your own list views](#your-own-list-views-signed-in-employees). The
+> description below is for administrators and API keys.
+
 #### `get_list_views`
 All saved list views of the company, whoever may see them.
 
@@ -674,6 +679,28 @@ All saved list views of the company, whoever may see them.
 
 #### `delete_list_view`
 - **Input:** `{ listId, confirm: true }` → `{ deleted: true, listId, name, module }`
+
+#### Your own list views (signed-in employees)
+
+A signed-in employee whose CRM role may use saved list views (`see`, `create`, `modify`, `delete` on lists) gets
+`get_list_views`, `create_list_view`, `update_list_view` and `delete_list_view` for views that are **theirs alone**.
+Each tool appears only when the role allows what it does (see
+[Tools depend on the role](#tools-depend-on-the-role)). Needs the `lists:read` / `lists:write` scopes.
+
+- **Private only.** A new view belongs to the employee and nobody else sees it. Sharing is not available: sending
+  `public`, `roleIds`, `squadIds` or `userIds` (anyone but yourself) is refused with `VALIDATION_ERROR`. Leave them out.
+- **Edit and delete only your own views.** Views of other people, and shared or public views — even when the employee
+  owns them — are read-only: `update_list_view` and `delete_list_view` answer `PERMISSION_DENIED`. An id that is not
+  visible to the employee is `RESOURCE_NOT_FOUND`.
+- **No `confirm`.** The employee's own views never need it (a `confirm` argument is ignored).
+- `visibleAsButton` is allowed. A name must be unique among the employee's **own** views of the module.
+- `get_list_views` lists the views the employee can see in the CRM — their own, public ones and ones shared with them —
+  each with its `owner` (`{ id, name }`). Entries (columns, conditions, sorting) that use a field the role cannot read
+  or that no longer exists are left out and the view carries `entriesOmitted: true`. The answer is an array; when more
+  than 200 views are visible, the first 200 come back as `{ views: [...], truncated: true }`.
+- `update_list_view` still **replaces** each property you send (read the view first). Parts of the stored view that the
+  employee cannot see are not kept when columns, conditions or sorting are replaced.
+- Writes share the limit of **30 calls per 5 minutes** with the other configuration writes.
 
 ### Roles
 

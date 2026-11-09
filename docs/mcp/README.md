@@ -196,6 +196,11 @@ They add **19 tools** (up to **62** in total):
 They are available only to a **company administrator** (signed in) or an **API key**.
 Configuration changes apply to **every user of the company** at once.
 
+**Exception:** a signed-in **employee** gets the four list view tools (`get_list_views`, `create_list_view`,
+`update_list_view`, `delete_list_view`) for their own **private** views — no sharing, no `confirm`, only views they
+own — whether or not the configuration tools are enabled for the company. See
+[Your own list views](tools.md#your-own-list-views-signed-in-employees).
+
 ### Which tools you see
 
 - Tools your plan, the enabled features or your account do not allow are **not on the tool list** at all.
@@ -224,7 +229,7 @@ Tools that delete or change sensitive configuration refuse to run until the assi
 | `delete_sms_template`, `delete_email_template`, `delete_document_template` | Always |
 | `update_sms_template`, `update_email_template` | When the template sends automatically and its content changes |
 | `update_document_template` | When the document is attached to an automatically sent template and its content changes |
-| `delete_field`, `delete_list_view`, `delete_role`, `update_role` | Always |
+| `delete_field`, `delete_list_view`, `delete_role`, `update_role` | Always — except `delete_list_view` for a signed-in employee deleting their own private view, which needs no `confirm` |
 
 The assistant is told to set `confirm: true` only after **you** agreed in the conversation, and to ask once for a
 whole batch (listing every item), not once per item. `confirm` is set by the model, though — the confirmation that
@@ -262,7 +267,8 @@ below explains. Every tool belongs to a scope:
 
 > **Today every API key receives all scopes**. Per-key scopes
 > are planned. Until then, restrict tools in your MCP client as shown above. The `fields:`, `lists:`, `roles:` and
-> `squads:` tools additionally need the configuration tools enabled for the company.
+> `squads:` tools additionally need the configuration tools enabled for the company — except the list view tools of a
+> signed-in employee (own private views).
 
 ### Built-in safeguards
 
