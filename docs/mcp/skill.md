@@ -19,6 +19,10 @@ Source: [`skills/inflowcrm-mcp`](https://github.com/InflowCRM/public-api-docs/tr
   criteria, `count_records` and `get_pipeline_summary` instead of paging through records.
 - **Data conventions** — date and DateRange filters, `YYYY-MM-DD` Date answers, defaults on create, pick list values,
   relations by id, `expandRelations`, the `ambiguous` block of `find_record`, `whoami` for "my records".
+- **Notes and roles** — notes only through `list_record_notes` on the parent record, a note needs a parent; for a
+  signed-in employee `effectiveRights` and the `access` of each field before writing, no workaround for `PERMISSION_DENIED`
+  or `Unknown field`, own private list views without `confirm`, single `create_record` as the fallback when
+  `create_records` is refused (with the user's OK), `saveToRecord` when a large PDF does not reach the user.
 - **Pipelines** — pipeline id and stage *name* travel together; stages are matched by name, not position.
 - **Safe writes** — duplicate check before create, GUS lookup for new Polish companies, explicit user confirmation
   before deletes and bulk changes, CRM text is never treated as instructions.
