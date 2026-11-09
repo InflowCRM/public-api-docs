@@ -46,8 +46,8 @@ Lists the modules available to the API key with the singular/plural names config
 
 ### `get_module_fields`
 Fields of a module: `apiFieldName`, `label`, `block`, `type`, `required`, `hidden`, `access`, `pickListValues`,
-`relatedModule`, `relationField`, `relationFieldName`, `length`, `decimals`, `defaultValue`, `description`. Call it
-before searching, filtering, creating or updating.
+`allowNewItems`, `relatedModule`, `relationField`, `relationFieldName`, `length`, `decimals`, `defaultValue`,
+`description`. Call it before searching, filtering, creating or updating.
 
 - `block`: the form block the field sits in — the same label can repeat in two blocks (e.g. two addresses), and the
   block tells them apart.
@@ -62,6 +62,10 @@ before searching, filtering, creating or updating.
 - `decimals`: decimal places of a number field. `decimal` carries the same value for older clients.
 - `defaultValue`: the value a new record gets in this field when you do not send one (see [`data`](#data--field-values)).
   `false` appears only on a CheckBox field; any other field without a default has `null` (or no entry).
+- `allowNewItems`: only on PickList, MultiPicklist and RadioButton fields. `false` — a value outside
+  `pickListValues` is refused on write; `true` — the field accepts new values too, so a value that is not listed is
+  fine. Check it before you write a value that is not in the list. Over MCP only: the REST `getModuleFields` does not
+  return it.
 
 - **Input:** `{ module }`
 
@@ -201,7 +205,12 @@ appended to the record's files; a file sent for a File field replaces that field
 processed independently.
 
 - **Output:** `{ results: [{ index, ok: true, id } | { index, ok: false, error }], succeeded, failed }`
-- `isError` is set only when every item failed.
+- `isError` is set only when every item failed. When at least one item failed, the answer carries a second text
+  block `Reference: <id>…` — quote it if you report the failure (`report_problem`, `errorRefs`).
+- **Each `recordId` once.** `update_records` with the same `recordId` twice in one call (ids are compared without regard
+  to case or surrounding spaces) is refused as a whole: `VALIDATION_ERROR: The same recordId is listed more than once: …`.
+  Nothing is written — the items run in order, so a repeated id would silently overwrite the earlier change. Merge the
+  changes into one item and send again.
 - No file uploads in bulk calls. Shared limit: 10 bulk calls per 5 minutes.
 - **Rights of a signed-in employee:** `create_records` needs the CRM's **bulk import** right on the module (the one
   the CRM's import uses), `update_records` the **bulk edit** right — the single-record right is not enough. Without it
@@ -440,15 +449,18 @@ One e-mail or SMS with its text and, for e-mails, the sender name and the names 
 ## Users
 
 ### `list_users`
-Active users of the company: `id`, `systemLabel` (name), `email`, `role` and other fields with Api field names. Use
-the ids to set `owner` or user relations. `role` is `{ id, name }`, or `null` when the user has no valid role; it is
-left out for a signed-in employee. No passwords or API keys are ever returned. A signed-in employee sees the users and
+Active users of the company: `id`, `systemLabel` (name), `email`, `userType`, `role` and other fields with Api field
+names. Use the ids to set `owner` or user relations. `userType` is `admin`, `member` or `integration` (the same labels
+as in `whoami`) — it is also given to a signed-in employee. `role` is `{ id, name }`, or `null` when the user has no
+valid role; it is left out for a signed-in employee. **`role: null` on an `admin` is by design**: administrators hold
+every right and need no CRM role, so it is not a missing configuration. No passwords or API keys are ever returned. A signed-in employee sees the users and
 fields the CRM's user list shows them (no hidden fields) and, of the system fields, only `id` — no `createdTime`,
 `modifiedTime`, `createdBy` or `modifiedBy`.
 
 ### `get_user`
-- **Input:** `{ userId }` — answers like one `list_users` item, with `role` (`{ id, name }` or `null`) unless the
-  caller is an employee.
+- **Input:** `{ userId }` — answers like one `list_users` item, with `userType` and `role` (`{ id, name }` or `null`;
+  `null` is normal for an `admin`) unless the caller is an employee, who gets `userType` but no `role`.
+- REST (`/api/getUserList`) is unchanged: it does not return `userType`.
 
 ---
 
@@ -675,7 +687,13 @@ Deletes one or more custom fields of one module — **all or nothing**: one unkn
 call. The fields disappear from forms and lists, records keep their values, and the Api field name stays reserved.
 
 - **Input:** `{ module, fieldIds, confirm: true }` — `fieldIds`: 1–25 `fieldId`s from `get_field_layout`.
-- **Output:** `{ deleted: true, fields: [{ fieldId, apiFieldName, recordsWithValue, listViewsUsingField }] }`
+- **Output:** `{ deleted: true, fields: [{ fieldId, apiFieldName, recordsWithValue, listViewsUsingField, templatesUsingField }] }`
+- `templatesUsingField`: `{ smsTemplates, emailTemplates, documentTemplates }` — how many templates mention the field's
+  tag, so you can tell the user which messages and documents may now lose a value. The count is **informational**: it
+  can count more than the templates that really use the field (for example one of another module that has a tag with
+  the same name), never fewer. It is part of the answer, so it arrives **after** the delete — the call does not stop on
+  it, and the templates themselves are not changed. To find the affected templates, read them with the template tools
+  (`get_template_tags`, `get_sms_template`, `get_email_template`, `get_document_template`) and fix the text.
 - System fields cannot be deleted (`… is a system field and cannot be deleted; hide it with update_field (hidden: true) instead.`);
   required system fields cannot be hidden either (`… is a required system field of <module> and cannot be removed at all.`).
 - Delete several fields of a module in **one** call after one confirmation — not one call per field.
@@ -727,12 +745,20 @@ All saved list views of the company, whoever may see them.
   becomes `less` on a number and `lessDate` on a date).
 - Operators like `emptyString`, `today` or `isTrue` take no `value`; the others take **one** value (no arrays). Dates:
   ISO date `2026-11-02` or a timestamp with time zone.
-- **Output:** the created view. Name taken → `CONFLICT: A list view named '…' already exists in module '…'…`
+- **Pick-list conditions:** a value on a pick list, radio or multi pick list (`equal`, `notEqual`, `includes`,
+  `notIncludes`) is matched without regard to case and **stored in the list's own spelling** (`"nowy"` becomes
+  `"Nowy"`), so the CRM's view editor and the tools see one value. A value that is not in the list is **not an error**:
+  the view is saved with the value as you sent it and the answer carries `warnings` — records may still hold a value
+  that was removed from the list, and the view must keep finding them. On a field with `allowNewItems: true` an unlisted
+  value gets no warning. Read `warnings` and tell the user if the value looks like a typo.
+- **Output:** the created view (with `warnings` when a condition value is outside its pick list). Name taken →
+  `CONFLICT: A list view named '…' already exists in module '…'…`
 
 #### `update_list_view`
 - **Input:** `{ listId, name?, columns?, conditions?, sorting?, public?, roleIds?, userIds?, squadIds?, visibleAsButton?, confirm: true }`
 - A property you send **replaces** the stored one entirely — read the view first and send the full new value.
   `conditions: {}` clears the filter, `sorting: null` removes the sort. The module cannot change.
+- Pick-list conditions work as in `create_list_view`: canonical spelling, and `warnings` for a value outside the list.
 
 #### `delete_list_view`
 - **Input:** `{ listId, confirm: true }` → `{ deleted: true, listId, name, module }`
@@ -759,6 +785,8 @@ Each tool appears only when the role allows what it does (see
   than 200 views are visible, the first 200 come back as `{ views: [...], truncated: true }`.
 - `update_list_view` still **replaces** each property you send (read the view first). Parts of the stored view that the
   employee cannot see are not kept when columns, conditions or sorting are replaced.
+- Pick-list conditions behave as for administrators: the value is stored in the list's spelling and a value outside the
+  list is saved with `warnings` in the answer, not refused.
 - Writes share the limit of **30 calls per 5 minutes** with the other configuration writes.
 
 ### Roles
