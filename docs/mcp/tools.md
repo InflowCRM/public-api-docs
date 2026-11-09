@@ -39,13 +39,19 @@ Lists the modules available to the API key with the singular/plural names config
 - **Output:** `[{ moduleName, singular, plural, systemModuleName }]` — pass `systemModuleName` as `module`.
 
 ### `get_module_fields`
-Fields of a module: `apiFieldName`, `label`, `block`, `type`, `required`, `hidden`, `pickListValues`, `relatedModule`,
-`relationField`, `relationFieldName`, `length`, `decimals`, `defaultValue`, `description`. Call it before searching,
-filtering, creating or updating.
+Fields of a module: `apiFieldName`, `label`, `block`, `type`, `required`, `hidden`, `access`, `pickListValues`,
+`relatedModule`, `relationField`, `relationFieldName`, `length`, `decimals`, `defaultValue`, `description`. Call it
+before searching, filtering, creating or updating.
 
 - `block`: the form block the field sits in — the same label can repeat in two blocks (e.g. two addresses), and the
   block tells them apart.
-- `hidden: true`: the field is hidden in the CRM forms; it is still listed and can be read and written.
+- `hidden: true`: the field is hidden in the CRM forms. With an API key or an administrator it is still listed and can
+  be read and written. A **signed-in employee** does not get hidden fields at all (see
+  [Fields an employee cannot read or change](#fields-an-employee-cannot-read-or-change)); only required fields and
+  fields the CRM shows anyway stay.
+- `access`: `"full"` — the field can be written — or `"read"` — the connected user's CRM role cannot change it, and a
+  write to it is refused with `PERMISSION_DENIED`. API keys and administrators always get `"full"`. Check it before
+  you build a `data` payload.
 - `decimals`: decimal places of a number field. `decimal` carries the same value for older clients.
 - `defaultValue`: the value a new record gets in this field when you do not send one (see [`data`](#data--field-values)).
 
@@ -216,11 +222,38 @@ Moves a record to the CRM trash. → `{ id, deleted: true }`
   records that do not exist in your company are rejected.
 - **Owner:** a new record belongs to the user behind the connection (the integration user for an API key). To assign someone else, send a user id from `list_users`
   in the field whose `relationField` is `owner` (see `get_module_fields` for its Api field name).
+- **Fields an employee cannot read or change:** see the [next section](#fields-an-employee-cannot-read-or-change).
 - **Pipelines** (`potential`, `order`): set the pipeline id (from `get_pipelines`) and the **stage name** together.
   The stage is matched by name (`"1"` means a stage called "1", not the first stage). On create, or when moving a
   record to another pipeline, a missing stage means the first stage; an update that keeps the pipeline keeps its stage. Setting the pipeline field to `null` detaches the record and removes its card from the
   board (when the field is not required). Check `get_module_fields` for the Api field names of the pipeline and
   stage fields in your company.
+
+### Fields an employee cannot read or change
+
+For a **signed-in employee** the CRM role decides per field, exactly as in the CRM. (API keys and administrators are
+not affected.)
+
+- **Hidden fields and fields the role may not read are invisible.** They are not listed by `get_module_fields`, not
+  returned in any answer (records, expanded relations, `list_users`, documents, the files of a hidden File field) and
+  not accepted as a key of `data`, `filters`, `advancedFilter` or `sort`. A write that names such a field is refused
+  like a field that does not exist — ``Unknown field(s) in `data`: <name>. Valid fields: …`` — so the answer does
+  not reveal that the field exists. Required fields stay visible even if they are marked hidden, so a record can still
+  be created.
+- **Read-only fields and relations** (`access: "read"` in `get_module_fields`) can be read but not written. Any write
+  that names one — `create_record`, `update_record`, each item of the bulk tools, a relation set to a record, to `null`
+  or to `[]` — is refused with
+  `PERMISSION_DENIED: Your CRM role cannot edit the field(s) <names> of module '<module>'. The record was not changed; tell the user to ask their CRM administrator for edit access.`
+  This applies **when creating** a record too. The default value of a read-only field is not filled in (the CRM drops
+  it the same way); leaving the field out never causes a refusal.
+- **Owner:** when the role cannot edit the owner field, an explicit owner in `data` is refused with the same
+  `PERMISSION_DENIED`; leave `owner` out and the record belongs to the employee. When the role may edit it, an
+  employee with the "own records only" right may still create a record for someone else or hand a record over.
+- A hidden or unreadable field is also empty in a generated document (`generate_document`), even when the template
+  prints it.
+
+> The assistant cannot work around these refusals and should not try. Tell the user to ask their CRM administrator
+> to change the role or the field settings.
 
 ### `files` — attachments in `create_record` / `update_record`
 
