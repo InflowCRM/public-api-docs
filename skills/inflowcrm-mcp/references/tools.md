@@ -200,6 +200,12 @@ processed independently.
 - **Output:** `{ results: [{ index, ok: true, id } | { index, ok: false, error }], succeeded, failed }`
 - `isError` is set only when every item failed.
 - No file uploads in bulk calls. Shared limit: 10 bulk calls per 5 minutes.
+- **Rights of a signed-in employee:** `create_records` needs the CRM's **bulk import** right on the module (the one
+  the CRM's import uses), `update_records` the **bulk edit** right — the single-record right is not enough. Without it
+  the whole call is refused before any item runs:
+  `PERMISSION_DENIED: Your CRM role does not allow bulk import on module '<module>'. Call create_record one record at a time instead.`
+  (`bulk edit` and `update_record` for `update_records`). Creating or updating the records one by one still works with
+  the single-record right — but not without asking the user first. Administrators and API keys are not affected.
 
 ### `delete_record`
 Moves a record to the CRM trash. → `{ id, deleted: true }`
@@ -440,7 +446,13 @@ Renders a template for one record into a PDF (≤ 5 MB) and returns it. Limit: 2
 
 - **Input:** `{ templateId, recordId, saveToRecord? }` — the record must belong to the template's module.
   `saveToRecord: true` also stores the PDF as a file of the record.
-- **Output:** text item `{ fileName, fileSize, fileId? }` + an embedded PDF `resource` (base64).
+- **Output:** text item `{ fileName, fileSize, fileId?, hint? }` + an embedded PDF `resource` (base64).
+- **`hint`** appears when the PDF is larger than about 75 KB (some clients drop a PDF that large or cannot hand it to
+  the user — Claude, for one, does not pass the file on). Without `saveToRecord` it says to call `generate_document`
+  again with `saveToRecord: true` and ask the user to open the file in the **Files** tab of the record in InflowCRM;
+  with `saveToRecord` it names the saved `fileId` and says the same. Use `saveToRecord: true` from the start when
+  your client does not give the user the PDF.
+- A note has no document templates: a note template is `RESOURCE_NOT_FOUND` here (see [Notes](#notes)).
 
 ---
 

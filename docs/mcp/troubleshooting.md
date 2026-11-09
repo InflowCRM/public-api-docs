@@ -39,7 +39,7 @@ Apps that support only SSE cannot connect.
 ### "Nie znaleziono CRM o tym adresie albo MCP nie jest w nim włączone."
 
 *(CRM not found at this address, or MCP is not enabled in it.)* Enter the address you use to log in to the CRM, e.g.
-`firma.inflowstore.pl`. If the address is right, [ask InflowCRM](../contact.md) to enable MCP for your company.
+`firma.inflowstore.pl` (capital letters do not matter). If the address is right, [ask InflowCRM](../contact.md) to enable MCP for your company.
 
 ### "To konto nie może łączyć aplikacji AI z CRM. Skontaktuj się z administratorem firmy."
 
@@ -100,11 +100,19 @@ limit is shared by everything using the same API key, so give each integration i
 - Tools your plan, the enabled features or your account do not allow are not listed.
 - After InflowCRM enables a feature, **reconnect** the app or start a new chat. Claude Code: `/mcp`, then reconnect.
 - Check the connector is switched on for this chat, and that the tool is not switched off in your app's settings.
+- When you signed in as an **employee**, the list follows your CRM role: a tool the role has no right for is not
+  listed (for example no `delete_record` without the right to delete, no `create_records` without bulk import). Ask
+  your company administrator to change the role — see [Tools depend on the role](tools.md#tools-depend-on-the-role).
+- Notes are read with `list_record_notes` on the record they belong to; `search_records` does not take notes.
 
 ### The assistant says a field does not exist, or cannot see it
 
 Only fields with an **Api field name** can be read, filtered and written. Set one in the field settings in the CRM, then
 ask the assistant to read the fields again.
+
+When you signed in as an **employee**, fields your CRM role cannot read — and fields marked hidden — are not shown to the
+assistant at all, and it answers `Unknown field(s)` if it names one. Fields your role may only read are refused with
+`PERMISSION_DENIED` when written, also when creating a record. Ask your company administrator for access.
 
 ### `PERMISSION_DENIED` or `FORBIDDEN`
 
@@ -114,6 +122,12 @@ The connected account may not do this. Ask your company administrator. There is 
 
 Sensitive changes need your agreement in the conversation, and your AI app may ask as well.
 See [Confirmations](README.md#confirmations).
+
+### A generated PDF does not reach me
+
+Some AI apps (Claude, for example) cannot pass a large PDF from `generate_document` on to you. The answer then carries a
+`hint`: ask the assistant to generate the document again with `saveToRecord: true` and open the file in the **Files**
+tab of the record in InflowCRM. The PDF saved to the record needs the `files:write` scope, as always.
 
 ### A count or report looks too low
 

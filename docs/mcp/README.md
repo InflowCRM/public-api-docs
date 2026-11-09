@@ -74,7 +74,7 @@ How signing in works:
 
 1. In your AI app, add the connector with the URL `https://mcp.inflowcrm.pl` and click **Connect**.
 2. A page *"Połącz aplikację AI z InflowCRM"* asks for **your CRM address** — the one you log in at, e.g.
-   `firma.inflowstore.pl`.
+   `firma.inflowstore.pl`. Capital letters do not matter: `Firma.inflowstore.pl` finds the same company.
 3. You are sent to your company's CRM. Log in if needed. The consent screen shows which app asks for access, the
    address it will return to, your account and your company.
 4. Click **allow**. The app is connected; from now on the assistant works **as you, with your rights**.
