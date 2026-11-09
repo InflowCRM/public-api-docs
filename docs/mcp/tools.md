@@ -61,6 +61,7 @@ before searching, filtering, creating or updating.
   you build a `data` payload.
 - `decimals`: decimal places of a number field. `decimal` carries the same value for older clients.
 - `defaultValue`: the value a new record gets in this field when you do not send one (see [`data`](#data--field-values)).
+  `false` appears only on a CheckBox field; any other field without a default has `null` (or no entry).
 
 - **Input:** `{ module }`
 
@@ -231,6 +232,14 @@ Moves a record to the CRM trash. → `{ id, deleted: true }`
   files, the owner and pipeline stage fields get no default, and neither do fields the connected user may not see.
 - **Dates without a time:** a date without a time (`2026-05-10`) written to a Date or DateTime field is stored as midnight in Europe/Warsaw, so reading it back gives the same day. This applies to MCP writes only; the REST API stores such a
   value as `00:00Z`.
+- **A day that does not exist is refused:** `2026-02-30`, `2026-04-31`, `2027-02-29` (not a leap year) — also written
+  as `02/30/2026` or `2026.02.30`, in a DateRange too — fails with `VALIDATION_ERROR`; the date is never moved to the
+  next month. Valid dates are stored as before. The same rule applies to the REST API (`400`), see
+  [REST API](../rest-api/endpoints.md#data-written-through-the-api).
+- **Multi-value fields** (`MultiPicklist`, `MultiEmail`, `MultiPhone`): send an array. A single value replaces the
+  whole list (`"a"` is stored as `["a"]`, not added to it); `""` or `null` empties the field; an object or a boolean
+  is refused. On `MultiEmail` and `MultiPhone` a single string is checked like one list item, so
+  `"a@x.pl, b@y.pl"` is refused — send `["a@x.pl", "b@y.pl"]`. A `DateRange` field must be an array `[from, to]`.
 - **Relations** take a record id (multi-relations an array of ids); `null` or `""` clears the relation. Ids of
   records that do not exist in your company are rejected.
 - **Owner:** a new record belongs to the user behind the connection (the integration user for an API key). To assign someone else, send a user id from `list_users`
@@ -632,7 +641,7 @@ Adds a custom field. Its type and Api field name cannot be changed later.
 | `label` | string | required, 1–100 characters, unique in the module |
 | `type` | string | required: `String`, `Number`, `Date`, `Datetime`, `PickList`, `MultiPicklist`, `RadioButton`, `CheckBox`, `Email`, `Phone`, `Link`, `Nip`, `Rating` |
 | `block` | string | block name; default: the first visible block |
-| `apiFieldName` | string | letters and digits, starts with a letter, ≤ 64; generated when omitted |
+| `apiFieldName` | string | letters, digits and `_`, starts with a letter, ≤ 64; generated when omitted |
 | `description` | string | ≤ 500 |
 | `required` | boolean | default `false` |
 | `pickListValues` | string[] | required for `PickList`, `MultiPicklist`, `RadioButton` (1–200 values, unique) |
@@ -755,14 +764,61 @@ Each tool appears only when the role allows what it does (see
 ### Roles
 
 #### `list_roles`
-- **Input:** none → `[{ roleId, name, userCount }]`
+- **Input:** none → `[{ roleId, name, userCount, blockedUserCount?, warnings? }]`
+- `userCount` counts active users only, like `list_users`; `blockedUserCount` appears when the role also has blocked
+  users (a role with blocked users still cannot be deleted).
+- `warnings` appears when the saved role is inconsistent — see [`get_role`](#get_role).
 
 #### `get_role`
-- **Input:** `{ roleId }` → `{ roleId, name, userCount, modules: [{ module, see, create, modify, delete, … }], customPermissions }`
+- **Input:** `{ roleId }` → `{ roleId, name, userCount, blockedUserCount?, modules: [{ module, see, create, modify, delete, … }], customPermissions, warnings? }`
 - Module rights: `see`, `share`, `create`, `modify`, `delete`, `seeOthers`, `modifyOthers`, `deleteOthers`,
   `seeSquad`, `modifySquad`, `modifyShared`, `deleteSquad`, `deleteShared`, `seeRole`, `modifyRole`, `deleteRole`,
   `massEdit`, `massDelete`, `massExport`, `massImport`. Modules marked `derivedFrom` are computed from
   `customPermissions` and are changed there.
+- `warnings` (absent when there is nothing to report) lists what is wrong in the **saved** role, for the modules you
+  can see: a right that is on while a right it builds on is off (see [Rights depend on each other](#rights-depend-on-each-other)),
+  a right above the module's default that the CRM role editor cannot grant (e.g. `massDelete cannot be granted on this
+  module`), and a module with more than one rule (the CRM uses only the first). Each warning says how to fix it with
+  `update_role`. Read it before copying a role.
+
+#### Rights depend on each other
+
+`create_role` and `update_role` apply the same rules as the role editor in the CRM, but **refuse** a call that breaks
+them instead of correcting the role silently (a correction would grant more than you asked for):
+
+| Right | needs |
+|---|---|
+| `seeSquad` | `see` |
+| `seeOthers` | `see`, `seeSquad` |
+| `create`, `modify`, `delete` | `see` |
+| `modifySquad` | `see`, `seeSquad`, `modify` |
+| `modifyOthers` | `see`, `seeSquad`, `seeOthers`, `modify`, `modifySquad` |
+| `deleteSquad` | `see`, `seeSquad`, `delete` |
+| `deleteOthers` | `see`, `seeSquad`, `seeOthers`, `delete`, `deleteSquad` |
+| `massEdit` | `see`, `seeSquad`, `seeOthers`, `modify`, `modifySquad`, `modifyOthers` |
+| `massDelete` | `see`, `seeSquad`, `seeOthers`, `delete`, `deleteSquad`, `deleteOthers` |
+| `massImport` | `see`, `seeSquad`, `seeOthers`, `create`, `modify`, `modifySquad`, `modifyOthers` |
+| `massExport` | `see`, `seeSquad`, `seeOthers` |
+
+- `delete` needs `see` only — **not** `modify`, as in the CRM. `modifyShared`, `deleteShared` and the role-level rights
+  have no dependency.
+- The refusal is `VALIDATION_ERROR: modules[<module>]: <right> needs <rights>…`: set the missing rights to `true`, or
+  switch the dependent right off.
+- The check is made on the role **as it will be saved**, including what the CRM computes on save.
+- `update_role` refuses only the violations **the call introduces**. A role that is already inconsistent stays
+  editable (rename it, change other modules, repair it); `get_role.warnings` shows what is wrong.
+- **E-mail, SMS and documents** (modules with `derivedFrom`): the CRM computes most of their rights from
+  `customPermissions`. Rights the role editor does not offer for them — bulk actions, `*Others`, `*Squad`, `share`, and
+  for e-mail and SMS also `modify`, `delete` and their `*Shared` variants — may not be **wider than the default**
+  (setting them to `false` is allowed). `modify` and `delete` of these modules still need `see`.
+- **`share`** can be granted only on the modules where the role editor offers it (customers, potentials, orders,
+  tasks, notes, e-mail templates, SMS templates); elsewhere it may not exceed the default.
+- A new role created **without `canSeeEmail`** (or with `none`) gets e-mail `modify` and `delete` off, because e-mail
+  `see` is off then. Rights you give explicitly in `modules` are judged as given. Turning `canSeeEmail` on later does
+  not widen them.
+- A role with **more than one rule for a module** cannot be changed in that module over MCP (the CRM uses only the
+  first rule): `update_role` is refused for it, other modules and the name stay editable. Remove the duplicates in the
+  CRM role settings.
 
 #### `create_role`
 - **Input:** `{ name, confirm: true, copyFromRoleId?, modules?, customPermissions? }` — `name` unique; without `copyFromRoleId` the
@@ -776,11 +832,18 @@ Each tool appears only when the role allows what it does (see
   bundle. Rights to manage users, roles, fields, field rules, company settings and squads are granted only in the CRM.
   Rights of modules that are not shown stay as they are (a copy made with `copyFromRoleId` keeps them). Sending any
   right of a `derivedFrom` module is refused — set the matching `customPermissions` key instead.
+- **Copy (`copyFromRoleId`):** the **whole** result is checked, not only what you changed, so a source role that breaks
+  the rules above is refused until `modules` corrects it with explicit flags (`false` for rights to drop). A role whose
+  problem lies in a module MCP cannot change, or that holds duplicate rules, is refused with
+  `VALIDATION_ERROR: This role cannot be copied over MCP: …` — correct it in the CRM role settings or create the role
+  without `copyFromRoleId`. `get_role.warnings` of the source tells you beforehand.
 - **Output:** the new role (`userCount: 0`).
 
 #### `update_role`
 Changes the name, module rights (only the rights you send) or custom permissions (only the keys you send) of a role.
-Every user holding the role is affected — the answer's `userCount` says how many.
+Every user holding the role is affected — the answer's `userCount` says how many active users (`blockedUserCount`
+adds blocked ones, when there are any). The call is checked against the dependencies in
+[Rights depend on each other](#rights-depend-on-each-other).
 
 - **Input:** `{ roleId, confirm: true, name?, modules?, customPermissions? }`
 - **Output:** the role after the change.
@@ -789,7 +852,7 @@ Every user holding the role is affected — the answer's `userCount` says how ma
 - **Input:** `{ roleId, confirm: true }` → `{ deleted: true, roleId, name, listViewsReferencingRole }`
 - Refused while users have the role:
   `CONFLICT: 2 users still have this role; move them to another role in the CRM user settings first, then delete the role.`
-  MCP does not edit users — move them in the CRM's user settings.
+  MCP does not edit users — move them in the CRM's user settings. Unchanged: blocked users count here as well.
 
 ### Squads
 
