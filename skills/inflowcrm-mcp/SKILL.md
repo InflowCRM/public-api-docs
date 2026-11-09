@@ -69,12 +69,18 @@ Cache this per conversation — module fields rarely change mid-task.
 - `update_record` changes only the keys you send. Sending back a record you fetched is fine — read-only system
   fields (`id`, `createdTime`, `recordNumber`…) are ignored — but not one read with `expandRelations`: send
   relations as ids.
-- **Pick lists:** send one of `pickListValues` exactly as listed.
+- **Pick lists:** send one of `pickListValues` exactly as listed. A value outside the list is accepted only when the
+  field has `allowNewItems: true` in `get_module_fields` — check it first; on `false` ask the user instead of trying.
 - **Defaults:** on `create_record` / `create_records` a field you leave out gets its `defaultValue` from
   `get_module_fields`; send `null` or `""` if the field must stay empty. A date without a time is stored as midnight
   in Europe/Warsaw.
-- **Relations:** send record ids (customer/contact relations: ids from search). `null` clears. Unknown or foreign
-  ids are rejected.
+- **Dates must exist:** `2026-02-30`, `2026-04-31` or `2027-02-29` is refused with `VALIDATION_ERROR` — never moved to
+  the next month. Do not "fix" it by guessing: ask the user which day they meant.
+- **Multi-value fields (`MultiPicklist`, `MultiEmail`, `MultiPhone`) are always an array**, e.g. `["a@x.pl", "b@y.pl"]`.
+  A single value replaces the whole list, so to add an item read the record and send the full list; `[]`, `""` or
+  `null` empties it. `"a@x.pl, b@y.pl"` in one string is refused. A DateRange is `[from, to]`.
+- **Relations:** send record ids (customer/contact relations: ids from search). `null` or `""` clears. Unknown or
+  foreign ids are rejected.
 - **Owner:** new records belong to the connected user (the integration user for an API key). To assign a person,
   put a user id from `list_users` in the field whose `relationField` is `owner` (its apiFieldName comes from
   `get_module_fields`).
@@ -126,6 +132,8 @@ These rules apply to records, templates and CRM configuration alike.
   (claude.ai, ChatGPT, Claude Desktop) — that confirmation cannot be bypassed by text in the data.
 - Bulk tools: max 50 items per call and 10 calls per 5 minutes (shared). Report per-item failures from `results`;
   a partial failure is not an overall error.
+- **Do not repeat a `recordId` in one `update_records` call.** The whole batch is refused (`VALIDATION_ERROR`) and
+  nothing is written; merge the changes for one record into one item.
 - **`create_records` needs the bulk import right** (`update_records` bulk edit) of a signed-in employee's role. When it
   is refused with `PERMISSION_DENIED`, offer to create the records one by one with `create_record` and do it only after
   the user agrees; the single-record right still applies.
@@ -170,15 +178,27 @@ tools an employee has follow their role — a missing tool means the role does n
   Api field name for good. `update_field` changes pick lists either with the full `pickListValues` or with
   `addPickListValues` / `removePickListValues`; removing a value does not change records — report
   `recordsStillUsing` to the user. System fields cannot be deleted (non-required ones can be hidden instead); pick lists that drive
-  pipelines or statuses are changed in the CRM. `delete_field` is all or nothing.
+  pipelines or statuses are changed in the CRM. `delete_field` is all or nothing. Its answer has `templatesUsingField`
+  (SMS / e-mail / document templates that may use the field; informational, can over-count, never under-counts). It
+  arrives after the delete, so before asking for `confirm` warn that templates may use the field, and afterwards, when
+  it is above 0, tell the user which templates may need a fix — do not promise the number is exact.
 - **List views:** `get_module_fields` + `get_list_views` first. A view needs an audience (`public: true` or roles /
   users / squads). In `update_list_view` a property you send replaces the stored one — send the full new value.
   Conditions accept the `advancedFilter` operator names (`lower`, `contains`, `isEmpty`…) and map them to the
-  operator valid for the field type.
+  operator valid for the field type. **Read `warnings` in the answer:** a pick-list value outside the list is saved
+  as sent (not refused) and reported there — tell the user if it looks like a typo. A listed value is stored in the
+  list's own spelling.
 - **Roles:** `list_roles` → `get_role` before `update_role`; only the rights you send change. Only the modules the
   CRM's role editor shows for the company are listed (never history). Rights to manage users are granted only in the
   CRM. `delete_role` works only for a role without users. `list_users` / `get_user` show each user's `role`
   (`{ id, name }`).
+  Rights depend on each other as in the CRM role editor (`modify`/`delete` need `see`, `*Squad` needs `seeSquad`,
+  `*Others` needs `seeOthers`, `mass*` need the matching `*Others`): a call that breaks this is **refused**, not
+  corrected — set the missing rights or switch the dependent one off, and show the user what you changed.
+  **Check `warnings` of `get_role` / `list_roles` before copying a role** (`copyFromRoleId`) or editing it: the whole copy
+  is validated, so a source with warnings needs explicit corrections or has to be fixed in the CRM; a role with
+  duplicate rules for a module cannot be copied or changed in that module over MCP. `userCount` counts active users only
+  (`blockedUserCount` shows blocked ones) — still quote it when you ask to confirm `update_role`.
 - **Squads:** `list_squads` first. Adding or removing members changes which records those users see (`seeSquad`), so
   list the change and ask once; `add_users_to_squad` / `remove_users_from_squad` / `delete_squad` need `confirm: true`.
 - `update_field`, `create_list_view`, `update_list_view`, `create_role` and every delete of a field, list view or
@@ -186,6 +206,8 @@ tools an employee has follow their role — a missing tool means the role does n
 - Configuration writes are limited to 30 per 5 minutes (all kinds together).
 
 ## 8. Errors
+
+Validation messages start with `VALIDATION_ERROR: ` (a bulk item's `error` too); the rest of the text is the fix.
 
 | Message | Do |
 |---|---|

@@ -354,14 +354,19 @@ what was wrong and which tool to call next. Messages never contain stack traces.
 
 | Prefix | Meaning |
 |---|---|
-| `VALIDATION_ERROR:` | Bad input (wrong type, invalid NIP checksum, `query` rules…) |
+| `VALIDATION_ERROR:` | Bad input (wrong type, invalid NIP checksum, unknown field, unknown template tag, `query` rules…) — MCP tools start such a message with it, a bulk item's `error` too |
 | `RESOURCE_NOT_FOUND:` | Record, file, user, pipeline, template, field, list view or role not found (also for other companies' ids) |
 | `CONFLICT:` | The change clashes with the current state (e.g. a role that still has users, a name already taken) |
 | `FORBIDDEN:` / `UNAUTHORIZED:` / `PERMISSION_DENIED:` | The user behind the connection (their role) may not perform the operation |
 | `INTERNAL_ERROR:` | Server-side failure — retry later |
 
-Many validation messages have no prefix, e.g. `Unknown field(s) in \`data\`: foo. Valid fields: …`,
-`Field 'status' (Status) must be one of: …`, `Missing required field(s): …`.
+The validation prefix is added in one place for all tools, so a message reads e.g.
+`VALIDATION_ERROR: Unknown field(s) in \`data\`: foo. Valid fields: …`. A refusal that is not a validation problem
+(for example a change to an automatically sent template without `confirm`) keeps its own text.
+
+When a call fails, the answer carries a second text block `Reference: <id>. If you cannot resolve this, report it with
+report_problem (errorRefs).` For a bulk call that failed only partly (some items `ok: false`) the reference is there
+too — the answer is not an error, but the failed items can be reported with it.
 
 A call without a required `confirm: true` is refused before anything changes — either as invalid arguments or with
 a message such as `This template is sent automatically (autoSending.enabled). Show the new text to the user and call
