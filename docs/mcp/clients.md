@@ -118,7 +118,9 @@ it does not limit the key itself. Review the list when InflowCRM adds tools, bec
       "mcp__inflowcrm__create_document_template", "mcp__inflowcrm__update_document_template", "mcp__inflowcrm__delete_document_template",
       "mcp__inflowcrm__create_field", "mcp__inflowcrm__update_field", "mcp__inflowcrm__delete_field",
       "mcp__inflowcrm__create_list_view", "mcp__inflowcrm__update_list_view", "mcp__inflowcrm__delete_list_view",
-      "mcp__inflowcrm__create_role", "mcp__inflowcrm__update_role", "mcp__inflowcrm__delete_role"
+      "mcp__inflowcrm__create_role", "mcp__inflowcrm__update_role", "mcp__inflowcrm__delete_role",
+      "mcp__inflowcrm__update_module_names", "mcp__inflowcrm__update_company_settings",
+      "mcp__inflowcrm__update_numbering_settings", "mcp__inflowcrm__backfill_numbering", "mcp__inflowcrm__update_branding"
     ]
   }
 }

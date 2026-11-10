@@ -187,7 +187,7 @@ The template tools **prepare templates** — they do not send SMS or e-mail. Mes
 ### 🛠️ Configuration tools
 
 Companies that want the assistant to help **configure the CRM** can ask InflowCRM to enable the configuration tools.
-They add **19 tools** (up to **62** in total):
+They add **27 tools** (up to **70** in total):
 
 | Capability | Tools |
 |---|---|
@@ -195,9 +195,14 @@ They add **19 tools** (up to **62** in total):
 | Saved list views | `get_list_views`, `create_list_view`, `update_list_view`, `delete_list_view` |
 | Roles | `list_roles`, `get_role`, `create_role`, `update_role`, `delete_role` |
 | Squads | `list_squads`, `create_squad`, `update_squad`, `delete_squad`, `add_users_to_squad`, `remove_users_from_squad` |
+| Module names | `update_module_names` (what the company calls a module; `list_modules` shows which can be renamed) |
+| Company data | `get_company_settings`, `update_company_settings` (name, address, NIP, start page, knowledge base link) |
+| Record numbering | `get_numbering_settings`, `update_numbering_settings`, `backfill_numbering` |
+| Look of the web app | `get_branding`, `update_branding` (colour theme and tab title, only when white-label is active) |
 
-They are available only to a **company administrator** (signed in) or an **API key**.
-Configuration changes apply to **every user of the company** at once.
+They are available only to a **company administrator** (signed in) or an **API key** — never to an employee.
+Configuration changes apply to **every user of the company** at once. The settings tools return only the values listed in
+[Company settings](tools.md#company-settings), nothing else of the company configuration.
 
 **Exception:** an **employee signed in with OAuth** gets the four list view tools (`get_list_views`, `create_list_view`,
 `update_list_view`, `delete_list_view`) for their own **private** views — no sharing, no `confirm`, only views they
@@ -239,6 +244,7 @@ Tools that delete or change sensitive configuration refuse to run until the assi
 | `update_document_template` | When the document is attached to an automatically sent template and its content changes |
 | `update_field`, `delete_field`, `create_list_view`, `update_list_view`, `delete_list_view`, `create_role`, `update_role`, `delete_role` | Always — except the list-view tools for a signed-in employee working on their own private views, which need no `confirm` |
 | `delete_squad`, `add_users_to_squad`, `remove_users_from_squad` | Always |
+| `update_module_names`, `update_company_settings`, `update_numbering_settings`, `backfill_numbering`, `update_branding` | Always |
 
 The assistant is told to set `confirm: true` only after **you** agreed in the conversation, and to ask once for a
 whole batch (listing every item), not once per item. `confirm` is set by the model, though — the confirmation that
@@ -272,11 +278,12 @@ below explains. Every tool belongs to a scope:
 | `lists:read` / `lists:write` | `get_list_views` / `create_list_view`, `update_list_view`, `delete_list_view` |
 | `roles:read` / `roles:write` | `list_roles`, `get_role` / `create_role`, `update_role`, `delete_role` |
 | `squads:read` / `squads:write` | `list_squads` / `create_squad`, `update_squad`, `delete_squad`, `add_users_to_squad`, `remove_users_from_squad` |
+| `settings:read` / `settings:write` | `get_company_settings`, `get_numbering_settings`, `get_branding` / `update_module_names`, `update_company_settings`, `update_numbering_settings`, `backfill_numbering`, `update_branding` |
 | `messages:read` | `list_record_messages`, `get_message` |
 
 > **Today every API key receives all scopes**. Per-key scopes
-> are planned. Until then, restrict tools in your MCP client as shown above. The `fields:`, `lists:`, `roles:` and
-> `squads:` tools additionally need the configuration tools enabled for the company — except the list view tools of a
+> are planned. Until then, restrict tools in your MCP client as shown above. The `fields:`, `lists:`, `roles:`,
+> `squads:` and `settings:` tools additionally need the configuration tools enabled for the company — except the list view tools of a
 > employee signed in with OAuth (own private views).
 
 ### Built-in safeguards
@@ -317,7 +324,7 @@ confirmation on for deletes, bulk tools, template writes and configuration tools
 | Bulk writes | **10 calls per 5 minutes** (≤ 500 records) | `create_records` + `update_records` together |
 | Document generation | **20 calls per 5 minutes** | `generate_document` |
 | Template writes | **60 calls per 5 minutes** | create / update / delete of SMS, e-mail and document templates together |
-| Configuration writes | **30 calls per 5 minutes** | create / update / delete of fields, list views and roles together |
+| Configuration writes | **30 calls per 5 minutes** | create / update / delete of fields, list views, roles and squads, and every settings write (module names, company data, numbering, backfill, branding), together |
 | Failed authentication | 300 per 5 minutes per IP | counts `401` responses; once exceeded, every request from that IP gets `429` until the window resets |
 
 The request limit returns HTTP `429`; the per-tool limits return a tool error such as
