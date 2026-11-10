@@ -47,7 +47,7 @@ Lists the modules available to the API key with the singular/plural names config
 - **Output:** `[{ moduleName, singular, plural, systemModuleName, renamable }]` — pass `systemModuleName` as `module`.
   - `singular` and `plural` each carry all three forms the company uses: `{ denominator, genitive, accusative }`
     (e.g. `Klient`, `Klienta`, `Klienta`). A form the company never set shows the default name.
-  - `renamable`: `true` when [`update_module_names`](#update_module_names) can rename the module for this company.
+  - `renamable`: `true` when [`update_module_names`](#update_module_names) can rename the module for this company and the caller has the admin tools; always `false` for employees and companies without the admin tools.
 
 ### `get_module_fields`
 Fields of a module: `apiFieldName`, `label`, `block`, `type`, `required`, `hidden`, `access`, `pickListValues`,
