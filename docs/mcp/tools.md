@@ -1,7 +1,7 @@
 # MCP Tools Reference
 
-All tools of the InflowCRM MCP server: up to **43**, plus **19 configuration tools** when they are enabled for your
-company (up to 62). Tools your plan, the enabled features or your account do not allow are not listed at all —
+All tools of the InflowCRM MCP server: up to **43**, plus **27 configuration tools** when they are enabled for your
+company (up to 70). Tools your plan, the enabled features or your account do not allow are not listed at all —
 e.g. pipeline tools appear only when your plan includes potentials or orders. See [MCP Server](README.md) for
 connecting, authentication and limits.
 
@@ -13,7 +13,9 @@ connecting, authentication and limits.
 - Ids are 24-character hex strings (`recordId`, `userId`, `fileId`, `templateId`, pipeline `process`); fields are
   identified by `fieldId` (e.g. `cf12`), list views by `listId`, roles by `roleId`.
 - Unknown top-level arguments are rejected (input validation error). Every record in an answer has an `id`.
-- Read-only tools are marked with the MCP `readOnlyHint`; the delete tools and `update_role` carry `destructiveHint`.
+- Read-only tools are marked with the MCP `readOnlyHint`; the delete tools, `update_role` and the company settings
+  writes (`update_module_names`, `update_company_settings`, `update_numbering_settings`, `backfill_numbering`,
+  `update_branding`) carry `destructiveHint`.
 - Tools that need `confirm: true` refuse to run without it — set it only after the user agreed.
 - A signed-in (OAuth) user works within their role; the API key acts as the integration user. A signed-in **employee**
   also gets a tool list that follows the role — see [Tools depend on the role](#tools-depend-on-the-role).
@@ -42,7 +44,10 @@ needed.
 Lists the modules available to the API key with the singular/plural names configured by the company. **Start here.**
 
 - **Input:** none
-- **Output:** `[{ moduleName, singular, plural, systemModuleName }]` — pass `systemModuleName` as `module`.
+- **Output:** `[{ moduleName, singular, plural, systemModuleName, renamable }]` — pass `systemModuleName` as `module`.
+  - `singular` and `plural` each carry all three forms the company uses: `{ denominator, genitive, accusative }`
+    (e.g. `Klient`, `Klienta`, `Klienta`). A form the company never set shows the default name.
+  - `renamable`: `true` when [`update_module_names`](#update_module_names) can rename the module for this company.
 
 ### `get_module_fields`
 Fields of a module: `apiFieldName`, `label`, `block`, `type`, `required`, `hidden`, `access`, `pickListValues`,
@@ -618,17 +623,21 @@ Official name and address of a Polish company from the GUS (REGON) registry.
 
 ## Configuration tools
 
-Fields, saved list views, roles and squads — **only when InflowCRM has enabled the configuration tools for your company**, and
+Fields, saved list views, roles, squads, module names, company data, record numbering and the white-label look —
+**only when InflowCRM has enabled the configuration tools for your company**, and
 only for a company administrator (signed in) or an API key. A signed-in employee does not get them, with one exception:
 the four [list view tools](#saved-list-views), which work for the employee's **own private views** (below). Every
 change an administrator or an API key makes applies to **all users of the company** at once.
 
 **Common rules**
 
-- Creates, updates and deletes of fields, list views, roles and squads share one limit: **30 calls per 5 minutes**
-  (`Too many configuration changes, retry in N s.`).
+- Creates, updates and deletes of fields, list views, roles and squads, and every write of the
+  [company settings tools](#company-settings) (module names, company data, numbering, backfill, branding), share one
+  limit: **30 calls per 5 minutes** (`Too many configuration changes, retry in N s.`).
 - `update_field`, `delete_field`, `create_list_view`, `update_list_view`, `delete_list_view`, `create_role`,
-  `update_role`, `delete_role`, `delete_squad`, `add_users_to_squad` and `remove_users_from_squad` require `confirm: true` (exactly the boolean `true`) — send it only after the user agreed. A signed-in employee's
+  `update_role`, `delete_role`, `delete_squad`, `add_users_to_squad`, `remove_users_from_squad`,
+  `update_module_names`, `update_company_settings`, `update_numbering_settings`, `backfill_numbering` and
+  `update_branding` require `confirm: true` (exactly the boolean `true`) — send it only after the user agreed. A signed-in employee's
   own list views need no `confirm` (see below). For several changes, ask once for the whole batch.
 - Ids of other companies or deleted items → `RESOURCE_NOT_FOUND: … does not exist.` with the tool to call next.
 - Deletes are soft: the item disappears from the CRM, stored record values are kept.
@@ -915,3 +924,139 @@ Change only the squad membership of the users.
 - **Input:** `{ squadId, userIds, confirm: true }` — 1–50 user ids from `list_users`.
 - **Output:** counts of `changed` and `unchanged` users; repeating a call is harmless. A deleted, blocked or
   foreign user id is `RESOURCE_NOT_FOUND` and **nobody** is changed.
+
+### Company settings
+
+Module names, company data, record numbering and the white-label look: the settings an administrator changes in the CRM
+under **Settings**. They need the `settings:read` / `settings:write` scopes and the configuration tools enabled for the
+company, and they are available only to a **company administrator** (signed in) or an **API key** — never to an
+employee. Every write changes the setting for **all users of the company** and needs `confirm: true`.
+
+Each read returns a fixed set of values (listed per tool below) and nothing else of the company configuration. Every
+write answers with the settings as they are after the change. A refused change is `VALIDATION_ERROR: …` and
+changes nothing; do not try to get around it — fix the value or tell the user.
+
+#### `update_module_names`
+Changes how the company calls a module (for example "Klient" instead of "Customer") in menus, buttons and table
+headers. The module key never changes: integrations and the API keep using `systemModuleName`.
+
+- **Input:** `{ module, singular?, plural?, confirm: true }`; `singular` and `plural` are each
+  `{ denominator?, genitive?, accusative? }` — the nominative (mianownik), genitive (dopełniacz) and accusative
+  (biernik) form, e.g. `Klient` / `Klienta` / `Klienta`.
+- **Send all six forms.** A form you leave out keeps its current value, so a half-translated name would mix words.
+  Only the forms you send change; other modules are untouched. A module without default names (e.g. `contract`) needs
+  all six forms the first time.
+- **Which modules:** the ones `list_modules` reports with `renamable: true`, plus `contract` and `product` when the
+  company has them (the contracts feature, the products module). Any other module → `VALIDATION_ERROR`; a module name
+  that is not one of the renamable modules at all is refused earlier, as invalid arguments.
+- **Limits:** a form must not be empty and is at most 60 characters; `<`, `>`, control and invisible characters are
+  refused.
+- **Output:** `{ module, singular: { denominator, genitive, accusative }, plural: { denominator, genitive, accusative } }`
+  — the resulting forms.
+
+#### `get_company_settings`
+- **Input:** none
+- **Output:** `{ companyName, street, number, zipCode, city, nip, desktopRoute, companyKnowledgeBase: { link }, allowedDesktopRoutes }`
+  — a value that was never set is `null`. `desktopRoute` is the start page after logging in;
+  `allowedDesktopRoutes` lists the start pages this company may pick. Nothing else is returned.
+
+#### `update_company_settings`
+Changes the company data shown in Settings. Send only the fields to change; the others keep their value.
+
+| Argument | Type | Notes |
+|---|---|---|
+| `companyName` | string | 1–100 characters |
+| `street`, `city` | string | up to 100 characters; `""` clears |
+| `number` | string | building and flat number, up to 20; `""` clears |
+| `zipCode` | string | up to 12; `""` clears |
+| `nip` | string | 10 digits with a correct checksum (hyphens allowed) or a foreign VAT id with a country prefix; `""` clears |
+| `desktopRoute` | string | one of `allowedDesktopRoutes` from `get_company_settings` — a label such as `Lista Klientów`, not a path |
+| `companyKnowledgeBase` | object | `{ link }`: an `https://` address, up to 500 characters; `""` clears it and hides the menu item |
+| `confirm` | `true` | required |
+
+- Text with `<`, `>`, control or invisible characters is refused. A NIP that fails the checksum, a link that is not
+  `https://` and a `desktopRoute` outside `allowedDesktopRoutes` → `VALIDATION_ERROR`.
+- `desktopRoute` applies from each user's **next log-in**, not at once.
+- The company name and NIP are also tags (`company.name`, `company.nip`) in training-program documents, and the name
+  and address appear in certificates, so a change shows in documents generated afterwards.
+- **Output:** the settings as in `get_company_settings`.
+
+### Record numbering
+
+Numbers such as `FV/2026/0001` that the CRM gives to new records. The settings are **per module**. The tools offer the
+modules the CRM's numbering settings screen offers, that have numbering, belong to the company's plan and are shown in
+the web app; `contract` is not among them (contract series are per template, set in the application).
+
+#### `get_numbering_settings`
+- **Input:** `{ module? }` — one module; omit for all.
+- **Output:** `{ modules: [{ module, enabled, format, prefix, suffix, startingValue, numberLength, resetPeriod, nextNumberExample }] }`
+  - A module with no settings yet is reported with the defaults and `enabled: false`.
+  - `nextNumberExample`: the number the next new record would get, `null` while numbering is off. Reading it does not
+    use up a number.
+  - `format` tokens: `{prefix}` `{suffix}` `{number}` `{YYYY}` `{YY}` `{MM}` `{DD}` `{WW}` `{Q}` `{QQ}`.
+
+#### `update_numbering_settings`
+Changes the numbering of **one** module. Send only the fields to change.
+
+| Argument | Type | Notes |
+|---|---|---|
+| `module` | string | required, one module per call |
+| `enabled` | boolean | numbering of new records on or off |
+| `format` | string | contains `{number}` exactly once and only the tokens above, at most 100 characters, e.g. `{prefix}{YYYY}/{number}{suffix}` |
+| `prefix`, `suffix` | string | up to 20 characters, no `{` `}` |
+| `startingValue` | integer | from 1 |
+| `numberLength` | integer | 1–20 digits of `{number}`, padded with zeros |
+| `resetPeriod` | string | `none`, `daily`, `weekly`, `monthly`, `quarterly`, `yearly` |
+| `confirm` | `true` | required |
+
+- **Only new records.** Numbers already given never change. Raising `startingValue` takes effect from the next number;
+  lowering it does not roll the counter back, so numbers keep going up.
+- **A reset period needs date tokens** that tell the periods apart, otherwise numbers would repeat: `yearly` — a
+  year; `quarterly` — year and `{Q}` or `{QQ}`; `monthly` — year and `{MM}`; `weekly` — year and `{WW}`; `daily` —
+  year, `{MM}` and `{DD}`.
+- **Frozen after the first number.** Once a module has issued numbers, only `enabled` and `startingValue` can be
+  changed here; `format`, `prefix`, `suffix`, `numberLength` and `resetPeriod` are frozen (changing them could produce
+  duplicate numbers). Change those in the application.
+- The whole stored entry must be valid, so a stored value that breaks these rules (saved in the application) has to be
+  corrected in the same call.
+- A module the company cannot number → `VALIDATION_ERROR`.
+- **Output:** the resulting entry, as in `get_numbering_settings`.
+
+#### `backfill_numbering`
+Gives a number to every record of the module that has none, **oldest first**, with the module's current numbering
+settings.
+
+- **Input:** `{ module, confirm: true }`
+- **Output:** `{ jobId, status }` — `status` is `queued`, or `alreadyRunning` when a backfill of this module is already
+  in progress. The numbering runs **in the background**; the answer is not the result.
+- **Irreversible:** numbers given this way cannot be changed afterwards. Date tokens in the format (`{YYYY}`, `{MM}`…)
+  get **the day the backfill runs**, not the date of the record. Records that already have a number are never touched.
+- Start it about a minute after changing the settings (the background job reads them with a cache of about a minute).
+- Numbering of the module must be on, otherwise the call fails with `VALIDATION_ERROR: Numbering of '<module>' is
+  switched off. Switch it on with update_numbering_settings (enabled: true) before the backfill.`
+
+### White-label look (branding)
+
+The colour theme and the browser tab title of the web app. Available only when the **white-label** feature is active
+for the company; the tools never switch it on.
+
+#### `get_branding`
+- **Input:** none
+- **Output:** `{ theme, tabTitle, isActive, hasLogo, hasFavicon }` — `theme` is the name of the colour preset or `null`,
+  `tabTitle` the browser tab title or `null`, `isActive` whether white-label is on for the company, `hasLogo` /
+  `hasFavicon` whether an image is set (the images themselves are never returned).
+
+#### `update_branding`
+Changes the look of the web app for all users of the company. Send only the fields to change.
+
+- **Input:** `{ theme?, tabTitle?, confirm: true }`
+  - `theme`: the name of a preset — `inflowcrm`, `red-theme`, `green-theme`, `yellow-theme`, `orange-theme`,
+    `blue-theme` or `green-orange-theme`. Colours cannot be chosen freely.
+  - `tabTitle`: 1–60 characters, without `<`, `>`, control or invisible characters.
+- **Only when white-label is active** (`isActive` in `get_branding`). Otherwise the call fails with
+  `VALIDATION_ERROR: white-label is not active for this company; ask InflowCRM support` — the company asks
+  [InflowCRM](../contact.md) to switch it on.
+- **No logo or favicon:** they cannot be changed here, only in the web app (Settings, "Logo i kolory"); they stay as
+  they are.
+- Open sessions may show the change only after the web app is reloaded.
+- **Output:** the settings as in `get_branding`.

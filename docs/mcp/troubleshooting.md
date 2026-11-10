@@ -124,6 +124,29 @@ The connected account may not do this. Ask your company administrator. There is 
 Sensitive changes need your agreement in the conversation, and your AI app may ask as well.
 See [Confirmations](README.md#confirmations).
 
+### A configuration change is refused with `VALIDATION_ERROR`
+
+The message says what to fix, and nothing was changed. The usual ones:
+
+- **Record numbering** — `update_numbering_settings` refuses a `format` without `{number}` exactly once or with an
+  unknown token, a `resetPeriod` other than `none` whose `format` lacks the date tokens that tell the periods apart
+  (numbers would repeat), and any change of `format`, `prefix`, `suffix`, `numberLength` or `resetPeriod` once the module
+  has issued numbers — only `enabled` and `startingValue` can still be changed over MCP; the rest is done in the CRM
+  application. `backfill_numbering` is refused while numbering of the module is off
+  (`Numbering of '…' is switched off…`): switch it on first.
+- **White-label** — `update_branding` answers `white-label is not active for this company; ask InflowCRM support` when
+  the feature is off (`isActive: false` in `get_branding`). [Ask InflowCRM](../contact.md) to switch it on; the assistant
+  cannot. Logo and favicon are never changed over MCP.
+- **Company data** — a NIP with a wrong checksum, a knowledge base link that is not `https://`, a start page
+  (`desktopRoute`) that is not in `allowedDesktopRoutes` of `get_company_settings`.
+- **Module names** — a module that `list_modules` does not show as `renamable: true`, an empty or too long form
+  (60 characters), or a module without default names (e.g. `contract`) given fewer than six forms the first time.
+- **System fields** — `update_field` and `delete_field` refuse a built-in field of the CRM: it cannot be deleted, its
+  type, Api field name or built-in status cannot be changed, and a required one cannot be hidden or made optional.
+  Hide a non-required system field instead, or change it in the CRM.
+
+Fix the value from the message; do not look for another way to get the same change in.
+
 ### A generated PDF does not reach me
 
 Some AI apps (Claude, for example) cannot pass a large PDF from `generate_document` on to you. The answer then carries a
