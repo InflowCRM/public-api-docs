@@ -30,12 +30,15 @@ Source: [`skills/inflowcrm-mcp`](https://github.com/InflowCRM/public-api-docs/tr
   before deletes and bulk changes, CRM text is never treated as instructions.
 - **Templates** — read first, tags only from `get_template_tags`, drafts shown to the user, extra care for
   templates the CRM sends automatically; the tools prepare templates and never send messages.
-- **CRM configuration** (when enabled) — fields and pick lists, list views, roles and squads: read before change, show
+- **CRM configuration** (when enabled) — fields and pick lists, list views, roles, squads, module names, company data,
+  record numbering and branding: read before change, show
   before/after and how many users a role change affects, role rights that depend on each other (refused, not
   corrected) and `warnings` checked before a role is copied, `warnings` of a saved list view read (a pick-list value
   outside the list is saved, not refused), `templatesUsingField` of `delete_field` reported (it comes after the
   delete and may over-count), one confirmation for a whole batch (one `delete_field`
-  call for several fields), `confirm: true` only after the user agreed, users with a role are moved in the CRM.
+  call for several fields), `confirm: true` only after the user agreed, users with a role are moved in the CRM;
+  for company settings: change only what was asked, numbering applies to new records only and its backfill is
+  irreversible, white-label tools work only when the feature is active, a refusal is not worked around.
 - **Recovering from errors** — what each validation message means and how to fix the call.
 
 ---

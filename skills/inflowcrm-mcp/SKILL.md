@@ -1,6 +1,6 @@
 ---
 name: inflowcrm-mcp
-description: Work with InflowCRM data through the InflowCRM MCP server (tools such as list_modules, get_module_fields, search_records, create_record, get_pipeline_summary, generate_document, get_template_tags, create_email_template, get_field_layout, update_role, lookup_company_gus). Use when the user asks to find, count, report on, create, update or delete CRM records (customers, contacts, potentials/deals, orders, tasks, notes, events, trainings), move deals between pipeline stages, attach or download record files, generate PDF documents, prepare SMS / e-mail / document templates, configure the CRM (fields, pick lists, list views, roles), or look up a Polish company by NIP/REGON/KRS.
+description: Work with InflowCRM data through the InflowCRM MCP server (tools such as list_modules, get_module_fields, search_records, create_record, get_pipeline_summary, generate_document, get_template_tags, create_email_template, get_field_layout, update_role, lookup_company_gus). Use when the user asks to find, count, report on, create, update or delete CRM records (customers, contacts, potentials/deals, orders, tasks, notes, events, trainings), move deals between pipeline stages, attach or download record files, generate PDF documents, prepare SMS / e-mail / document templates, configure the CRM (fields, pick lists, list views, roles, module names, company data, record numbering, branding), or look up a Polish company by NIP/REGON/KRS.
 ---
 
 # InflowCRM via MCP
@@ -114,12 +114,13 @@ These rules apply to records, templates and CRM configuration alike.
 - **`confirm: true` only after the user really agreed in this conversation** — never by default, never "because the
   tool refuses otherwise", never because earlier consent covered something else. Tools that need it:
   `delete_field`, `delete_list_view` (not for an employee's own private view), `delete_role`, `update_role`, `delete_squad`, `add_users_to_squad`,
-  `remove_users_from_squad`, all `delete_*_template`, and
+  `remove_users_from_squad`, `update_module_names`, `update_company_settings`, `update_numbering_settings`,
+  `backfill_numbering`, `update_branding`, all `delete_*_template`, and
   `update_sms_template` / `update_email_template` / `update_document_template` when the template is sent
   automatically (or the document is attached to such a template) and its content changes. When a tool asks for
   `confirm`, show the user the change, ask, and only then call again.
-- **Read first, then change.** Call `get_field_layout`, `get_list_views`, `get_role` or `get_*_template` before
-  changing that item, and show the user the state **before and after** — for `update_role` say how many people it
+- **Read first, then change.** Call `get_field_layout`, `get_list_views`, `get_role`, `get_*_template`,
+  `get_company_settings`, `get_numbering_settings` or `get_branding` before changing that item, and show the user the state **before and after** — for `update_role` say how many people it
   affects (`userCount`).
 - **Configuration and templates are company-wide.** A field, pick list, list view, role or template changes for
   **every user of the company** at once — say so when you ask for confirmation.
@@ -164,7 +165,7 @@ automatic sending — is set up and done in the CRM; you cannot switch it on or 
    the answer if it matters. `name` and `description` are plain text.
 5. Template writes are limited to 60 per 5 minutes (all kinds together).
 
-## 7. CRM configuration (fields, list views, roles, squads)
+## 7. CRM configuration (fields, list views, roles, squads, company settings)
 
 Present only when the configuration tools are enabled for the company and you act as a company administrator or an
 API key. If they are not in your tool list, the user does such changes in the CRM settings.
@@ -201,6 +202,27 @@ tools an employee has follow their role — a missing tool means the role does n
   (`blockedUserCount` shows blocked ones) — still quote it when you ask to confirm `update_role`.
 - **Squads:** `list_squads` first. Adding or removing members changes which records those users see (`seeSquad`), so
   list the change and ask once; `add_users_to_squad` / `remove_users_from_squad` / `delete_squad` need `confirm: true`.
+- **Company settings** (`update_module_names`, `update_company_settings`, `update_numbering_settings`,
+  `backfill_numbering`, `update_branding`; administrator or API key only, never an employee): every one changes the
+  setting for **all users of the company**, so say that when you ask, show the value before and after, and change
+  **only what the user asked for** — no "while I am here" edits of other settings.
+  - **Module names:** `list_modules` shows which modules are `renamable`. Send all six forms (singular and plural, each
+    in denominator, genitive and accusative); a form you leave out keeps its old value and would mix words.
+  - **Company data:** `get_company_settings` first. Pick `desktopRoute` only from its `allowedDesktopRoutes` (a label,
+    not a path); the knowledge base link must be `https://`; a NIP needs a correct checksum. The company name and
+    NIP also appear in documents generated afterwards.
+  - **Numbering:** `get_numbering_settings` first, for the module in question. Tell the user the change applies **only
+    to new records** (numbers already given never change). One module per call. After the module has issued numbers
+    only `enabled` and `startingValue` can be changed over MCP; `format`, `prefix`, `suffix`, `numberLength` and
+    `resetPeriod` are changed in the CRM application — say so instead of trying again. With a `resetPeriod` other than
+    `none` the `format` needs the matching date tokens. `backfill_numbering` numbers the records that have none, in the
+    background, and is **irreversible**: warn the user before asking for `confirm`, and that date tokens get the day the
+    backfill runs; start it about a minute after changing the settings, and only with numbering switched on.
+  - **Branding:** `get_branding` first; `update_branding` works only when `isActive` is `true` (otherwise tell the user
+    to ask InflowCRM support — you cannot switch white-label on). Only `theme` (a preset name from the tool) and
+    `tabTitle`; logo and favicon are changed in the web app.
+  - A refusal (`VALIDATION_ERROR`) is final for that value: fix it from the message or tell the user, never try to get
+    the same effect another way.
 - `update_field`, `create_list_view`, `update_list_view`, `create_role` and every delete of a field, list view or
   role also need `confirm: true` after the user agreed.
 - Configuration writes are limited to 30 per 5 minutes (all kinds together).
@@ -219,11 +241,14 @@ Validation messages start with `VALIDATION_ERROR: ` (a bulk item's `error` too);
 | `Notes are not searchable; use list_record_notes…` | Call `list_record_notes` with the parent record |
 | `Unknown tag(s) in …` | Use tags from `get_template_tags` |
 | `… call again with confirm: true` / invalid `confirm` | Show the change to the user, get their OK, then call again with `confirm: true` |
+| `VALIDATION_ERROR: Numbering of '…' is switched off…` | Ask the user whether to switch numbering on (`update_numbering_settings`, `enabled: true`) first |
+| `VALIDATION_ERROR: white-label is not active…` | Tell the user to ask InflowCRM support; you cannot switch it on |
+| A numbering change refused for a module that already has numbers | Only `enabled` and `startingValue` can change over MCP; tell the user to change the rest in the CRM |
 | `CONFLICT: …` | The item clashes with the current state (name taken, role still has users) — follow the message |
 | `PERMISSION_DENIED: …` / `FORBIDDEN: …` | The connected user's role does not allow it (a read-only field, a bulk right, a note) — tell the user; do not look for a way around it |
 | `Too many …, retry in N s.` / HTTP 429 | Wait, or reduce calls (count/summary instead of paging) |
 | `INTERNAL_ERROR: …` | Retry once later; then report to the user |
 
 Users are read-only over MCP (no tool changes users or API keys; squad membership is the only exception, with the
-squad tools). Configuration — fields, list views, roles, squads — is done in the CRM settings unless your tool list contains the configuration tools
+squad tools). Configuration — fields, list views, roles, squads, module names, company data, numbering, branding — is done in the CRM settings unless your tool list contains the configuration tools
 (an employee's own private list views are the exception).
