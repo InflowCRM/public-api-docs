@@ -1,7 +1,7 @@
 {
   "name": "inflowcrm",
   "description": "Agent skill for working with InflowCRM data through the InflowCRM MCP server.",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "author": {
     "name": "InflowCRM",
     "url": "https://inflowcrm.pl"
