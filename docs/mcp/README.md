@@ -189,7 +189,7 @@ The template tools **prepare templates** — they do not send SMS or e-mail. Mes
 ### 🛠️ Configuration tools
 
 Companies that want the assistant to help **configure the CRM** can ask InflowCRM to enable the configuration tools.
-They add **27 tools** (up to **70** in total):
+They add **33 tools** (up to **76** in total):
 
 | Capability | Tools |
 |---|---|
@@ -197,6 +197,7 @@ They add **27 tools** (up to **70** in total):
 | Saved list views | `get_list_views`, `create_list_view`, `update_list_view`, `delete_list_view` |
 | Roles | `list_roles`, `get_role`, `create_role`, `update_role`, `delete_role` |
 | Squads | `list_squads`, `create_squad`, `update_squad`, `delete_squad`, `add_users_to_squad`, `remove_users_from_squad` |
+| Sales pipelines | `create_pipeline`, `update_pipeline`, `create_stage`, `update_stage`, `reorder_stages`, `delete_stage` (only with potentials or orders in your plan; `get_pipelines` gives the ids) |
 | Module names | `update_module_names` (what the company calls a module; `list_modules` shows which can be renamed) |
 | Company data | `get_company_settings`, `update_company_settings` (name, address, NIP, start page, knowledge base link) |
 | Record numbering | `get_numbering_settings`, `update_numbering_settings`, `backfill_numbering` |
@@ -246,6 +247,7 @@ Tools that delete or change sensitive configuration refuse to run until the assi
 | `update_document_template` | When the document is attached to an automatically sent template and its content changes |
 | `update_field`, `delete_field`, `create_list_view`, `update_list_view`, `delete_list_view`, `create_role`, `update_role`, `delete_role` | Always — except the list-view tools for a signed-in employee working on their own private views, which need no `confirm` |
 | `delete_squad`, `add_users_to_squad`, `remove_users_from_squad` | Always |
+| `update_pipeline`, `update_stage`, `reorder_stages`, `delete_stage` | Always (`create_pipeline` and `create_stage` need none) |
 | `update_module_names`, `update_company_settings`, `update_numbering_settings`, `backfill_numbering`, `update_branding` | Always |
 
 The assistant is told to set `confirm: true` only after **you** agreed in the conversation, and to ask once for a
@@ -280,7 +282,7 @@ below explains. Every tool belongs to a scope:
 | `lists:read` / `lists:write` | `get_list_views` / `create_list_view`, `update_list_view`, `delete_list_view` |
 | `roles:read` / `roles:write` | `list_roles`, `get_role` / `create_role`, `update_role`, `delete_role` |
 | `squads:read` / `squads:write` | `list_squads` / `create_squad`, `update_squad`, `delete_squad`, `add_users_to_squad`, `remove_users_from_squad` |
-| `settings:read` / `settings:write` | `get_company_settings`, `get_numbering_settings`, `get_branding` / `update_module_names`, `update_company_settings`, `update_numbering_settings`, `backfill_numbering`, `update_branding` |
+| `settings:read` / `settings:write` | `get_company_settings`, `get_numbering_settings`, `get_branding` / `update_module_names`, `update_company_settings`, `update_numbering_settings`, `backfill_numbering`, `update_branding`, `create_pipeline`, `update_pipeline`, `create_stage`, `update_stage`, `reorder_stages`, `delete_stage` |
 | `messages:read` | `list_record_messages`, `get_message` |
 
 > **Today every API key receives all scopes**. Per-key scopes
@@ -307,9 +309,13 @@ below explains. Every tool belongs to a scope:
   content are removed).
 - **Audit log** — every tool call that passes input validation is logged with the tool name, argument *names*,
   affected record ids, result, IP address and user agent — and, for a signed-in user, which connected app made the
-  call. Argument values are not stored in the audit log, with one exception: a successful change made with the
+  call. Argument values are not stored in the audit log, with one exception: a successful change of fields, list views
+  (the administrator tools), roles, squads (name), module names, company data, numbering settings or branding made with the
   [configuration tools](#configuration-tools) also records the values it changed, before and after (only the changed
-  keys, no secrets, personal data such as e-mails and phone numbers redacted, long values shortened).
+  keys, no secrets, personal data such as e-mails and phone numbers redacted, long values shortened). Not recorded
+  that way: the pipeline and stage tools and `backfill_numbering` (tool name and ids only), squad membership changes
+  (the user ids the call named and how many users it moved — not who was a member before), and the list view tools of a
+  signed-in employee working on their own private views.
 
 ### Prompt injection
 
@@ -328,7 +334,7 @@ confirmation on for deletes, bulk tools, template writes and configuration tools
 | Bulk writes | **10 calls per 5 minutes** (≤ 500 records) | `create_records` + `update_records` together |
 | Document generation | **20 calls per 5 minutes** | `generate_document` |
 | Template writes | **60 calls per 5 minutes** | create / update / delete of SMS, e-mail and document templates together |
-| Configuration writes | **30 calls per 5 minutes** (a call refused before it wrote anything is not counted) | create / update / delete of fields, list views, roles and squads, and every settings write (module names, company data, numbering, backfill, branding), together |
+| Configuration writes | **30 calls per 5 minutes** (a call refused before it wrote anything is not counted — unless the limit itself refused it) | create / update / delete of fields, list views, roles, squads, pipelines and stages, and every settings write (module names, company data, numbering, backfill, branding), together |
 | Failed authentication | 300 per 5 minutes per IP | counts `401` responses; once exceeded, every request from that IP gets `429` until the window resets |
 
 The request limit returns HTTP `429`; the per-tool limits return a tool error such as

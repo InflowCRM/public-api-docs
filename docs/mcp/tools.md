@@ -1,7 +1,7 @@
 # MCP Tools Reference
 
-All tools of the InflowCRM MCP server: up to **43**, plus **27 configuration tools** when they are enabled for your
-company (up to 70). Tools your plan, the enabled features or your account do not allow are not listed at all —
+All tools of the InflowCRM MCP server: up to **43**, plus **33 configuration tools** when they are enabled for your
+company (up to 76). Tools your plan, the enabled features or your account do not allow are not listed at all —
 e.g. pipeline tools appear only when your plan includes potentials or orders. See [MCP Server](README.md) for
 connecting, authentication and limits.
 
@@ -13,7 +13,8 @@ connecting, authentication and limits.
 - Ids are 24-character hex strings (`recordId`, `userId`, `fileId`, `templateId`, pipeline `process`); fields are
   identified by `fieldId` (e.g. `cf12`), list views by `listId`, roles by `roleId`.
 - Unknown top-level arguments are rejected (input validation error). Every record in an answer has an `id`.
-- Read-only tools are marked with the MCP `readOnlyHint`; the delete tools, `update_role` and the company settings
+- Read-only tools are marked with the MCP `readOnlyHint`; the delete tools, `update_role`, the pipeline tools that
+  need `confirm` (`update_pipeline`, `update_stage`, `reorder_stages`, `delete_stage`) and the company settings
   writes (`update_module_names`, `update_company_settings`, `update_numbering_settings`, `backfill_numbering`,
   `update_branding`) carry `destructiveHint`.
 - Tools that need `confirm: true` refuse to run without it — set it only after the user agreed.
@@ -246,8 +247,9 @@ Moves a record to the CRM trash. → `{ id, deleted: true }`
 
 `data` of a write may carry the system keys a record read returns — `id`, `owner`, `createdBy`, `modifiedBy`,
 `createdTime`, `modifiedTime`, `recordNumber` (plus any key your company added to the public API system fields). They
-are **never stored**; sending them is not an error, so a record fetched with `get_record` can be sent back whole. A write
-that ignored one answers with a warning instead of reporting success silently:
+are **never stored**; sending them is not an error, so a record fetched with `get_record` can be sent back whole.
+(Exception: a key that is also the Api field name of a field of the module — e.g. a legacy field called `owner` — is that
+field, is written like any other and gets no warning.) A write that ignored one answers with a warning instead of reporting success silently:
 
 `Ignored read-only field(s): createdBy, recordNumber — they cannot be changed through MCP.`
 
@@ -368,7 +370,11 @@ listed cannot be called (the server answers like for an unknown tool).
 ### `get_pipelines`
 Pipelines (sales processes) of `potential` or `order` with their stage names.
 
-- **Input:** `{ module }` → `[{ id, systemLabel, stagesNames: [...] }]`
+- **Input:** `{ module }` → `[{ id, systemLabel, stagesNames: [...], stages: [{ id, name }] }]`
+- `id` is the pipeline id (a record's `process`); `stages` gives each stage's id, in order — the ids are for the
+  [pipeline configuration tools](#sales-pipelines-and-stages) only. Records are still set by stage **name**. A legacy
+  stage without an id is missing from `stages` (and cannot be changed over MCP), so `stages` can be shorter than
+  `stagesNames`.
 
 ### `get_pipeline_summary`
 Record count per stage and the sum of the value per currency — a funnel report without reading records.
@@ -658,7 +664,8 @@ Official name and address of a Polish company from the GUS (REGON) registry.
 
 ## Configuration tools
 
-Fields, saved list views, roles, squads, module names, company data, record numbering and the white-label look —
+Fields, saved list views, roles, squads, sales pipelines and their stages, module names, company data, record
+numbering and the white-label look —
 **only when InflowCRM has enabled the configuration tools for your company**, and
 only for a company administrator (signed in) or an API key. A signed-in employee does not get them, with one exception:
 the four [list view tools](#saved-list-views), which work for the employee's **own private views** (below). Every
@@ -666,25 +673,32 @@ change an administrator or an API key makes applies to **all users of the compan
 
 **Common rules**
 
-- Creates, updates and deletes of fields, list views, roles and squads, and every write of the
+- Creates, updates and deletes of fields, list views, roles, squads, pipelines and stages, and every write of the
   [company settings tools](#company-settings) (module names, company data, numbering, backfill, branding), share one
   limit: **30 calls per 5 minutes** (`Too many configuration changes, retry in N s.`). A call refused **before** it
   wrote anything — validation, a name that is taken, an id that does not exist, no permission, a missing `confirm` —
   does not use up the limit. A call that failed after the write began, and a call refused by the limit itself, does.
-- **Text rules:** field labels and descriptions, pick-list values, and the names of roles, squads and list views must not
+- **Text rules:** field labels and descriptions, pick-list values, and the names of roles, squads, list views, pipelines and stages must not
   contain `<` or `>`, control characters or invisible characters (a description may contain line breaks and tabs; a
   pick-list value may contain `>`, e.g. `>35`, but not `<`). Otherwise
-  `VALIDATION_ERROR: <input> must not contain < >, control or invisible characters.` Existing items with such text can
+  `VALIDATION_ERROR: <input> must not contain < >, control or invisible characters.` — for a pick-list value
+  `VALIDATION_ERROR: <input> must not contain <, control or invisible characters.` Existing items with such text can
   still be renamed to a clean name and deleted.
-- **Audit:** a successful configuration change is recorded in the audit log with the values it changed, before and
-  after (see [Built-in safeguards](README.md#built-in-safeguards)).
+- **Audit:** a successful change of fields, list views (the administrator tools), roles, squads (name), module names,
+  company data, numbering settings or branding is recorded in the audit log with the values it changed, before and
+  after. The pipeline and stage tools, `backfill_numbering` and the list view tools of a signed-in employee (their own
+  private views) are logged by tool name and ids only; squad membership changes record the user ids the call named and
+  how many users it moved, not the previous members (see
+  [Built-in safeguards](README.md#built-in-safeguards)).
 - `update_field`, `delete_field`, `create_list_view`, `update_list_view`, `delete_list_view`, `create_role`,
-  `update_role`, `delete_role`, `delete_squad`, `add_users_to_squad`, `remove_users_from_squad`,
-  `update_module_names`, `update_company_settings`, `update_numbering_settings`, `backfill_numbering` and
+  `update_role`, `delete_role`, `delete_squad`, `add_users_to_squad`, `remove_users_from_squad`, `update_pipeline`,
+  `update_stage`, `reorder_stages`, `delete_stage`, `update_module_names`, `update_company_settings`, `update_numbering_settings`, `backfill_numbering` and
   `update_branding` require `confirm: true` (exactly the boolean `true`) — send it only after the user agreed. A signed-in employee's
   own list views need no `confirm` (see below). For several changes, ask once for the whole batch.
 - Ids of other companies or deleted items → `RESOURCE_NOT_FOUND: … does not exist.` with the tool to call next.
-- Deletes are soft: the item disappears from the CRM, stored record values are kept.
+- Deletes are soft: the item disappears from the CRM, stored record values are kept. **Exception: `delete_stage`** removes
+  the stage from the pipeline for good, and the records it moves take the target stage's name (see
+  [`delete_stage`](#delete_stage)).
 
 ### Fields and pick lists
 
@@ -733,7 +747,8 @@ Changes one field. Send only what changes.
   and a `note` — update those records if the old value should disappear.
 - `hidden: true` also clears `required`. `defaultValue: null` clears the default.
 - Refused: hiding or making optional a required system field; changing pick lists that drive pipelines, stages or
-  statuses (change those in the CRM); a label another field already has.
+  statuses (pipelines and their stages have their own [tools](#sales-pipelines-and-stages); change statuses in the
+  CRM); a label another field already has.
 - **Output:** `{ module, field, removedPickListValues?, note? }`
 
 #### `delete_field`
@@ -975,6 +990,56 @@ Change only the squad membership of the users.
 - **Input:** `{ squadId, userIds, confirm: true }` — 1–50 user ids from `list_users`.
 - **Output:** counts of `changed` and `unchanged` users; repeating a call is harmless. A deleted, blocked or
   foreign user id is `RESOURCE_NOT_FOUND` and **nobody** is changed.
+
+### Sales pipelines and stages
+
+Create and change the sales processes of `potential` and `order` — the ones `get_pipelines` lists. Available only when
+your plan includes potentials or orders, and, like the other configuration tools, only to a company administrator
+(signed in) or an API key, with the `settings:write` scope. Read `get_pipelines` first: it gives the pipeline ids and, in
+`stages`, the stage ids.
+
+- A record keeps its stage by **name**, so renaming a pipeline or a stage renames it on the records as well (as in the CRM).
+- Names are unique — pipelines within a module, stages within a pipeline — ignoring case and spacing; a clash
+  with an existing name is `CONFLICT`, and the same stage name twice in the `stages` of one `create_pipeline` call
+  (`["A", "a"]`) is refused as `VALIDATION_ERROR: Stage 'a' is listed twice; stage names must differ …` before anything is
+  created. A pipeline name is at most 150 characters, a stage name 100; [text rules](#configuration-tools) apply
+  (no `< >`, control or invisible characters). A pipeline holds 1–30 stages.
+- `create_pipeline`, `update_pipeline`, `update_stage` and `reorder_stages` answer with the pipeline as it is after the
+  change: `{ pipelineId, module, name, stages: [{ id, name }] }`; `create_stage` and `delete_stage` answer as described
+  below.
+- The writes share the [limit](#configuration-tools) of 30 calls per 5 minutes and are audited by tool name and ids.
+- There is no tool to delete a pipeline; do that in the CRM.
+
+#### `create_pipeline`
+- **Input:** `{ module, name, stages }` — `module` is `potential` or `order`; `stages` is the list of stage names, first to
+  last, at least one (a pipeline without a stage cannot hold a record). No `confirm`.
+- **Output:** the new pipeline, with the stage ids.
+
+#### `update_pipeline`
+- **Input:** `{ pipelineId, name, confirm: true }` — renames the pipeline and the records on it.
+
+#### `create_stage`
+- **Input:** `{ pipelineId, name, position? }` — adds an empty stage at the end, or at `position` (0 = first; at most
+  the current number of stages). No `confirm`.
+- **Output:** `{ pipeline, stage: { id, name } }`.
+
+#### `update_stage`
+- **Input:** `{ pipelineId, stageId, name, confirm: true }` — renames the stage and the records on it.
+
+#### `reorder_stages`
+- **Input:** `{ pipelineId, stageIds, confirm: true }` — `stageIds` lists **every** stage id of the pipeline exactly once,
+  in the new order. Records stay on their stages.
+
+#### `delete_stage`
+- **Input:** `{ pipelineId, stageId, moveRecordsToStageId?, confirm: true }`
+- A stage that holds records is refused with their number unless `moveRecordsToStageId` names **another stage of the
+  same pipeline**: the records move there first (they take its name), then the stage is deleted.
+  `VALIDATION_ERROR: Stage 'X' holds 3 record(s). Pass moveRecordsToStageId …`
+- The last stage of a pipeline cannot be deleted.
+- **Permanent:** the stage is removed from the pipeline and not kept in any trash; the records moved to
+  `moveRecordsToStageId` get that stage's name (and the pipeline name) as their stage, so their previous stage is not
+  recorded. Ask the user first.
+- **Output:** `{ deleted: true, stageId, name, movedRecords, pipelineId, stages }`.
 
 ### Company settings
 
