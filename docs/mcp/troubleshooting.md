@@ -141,9 +141,11 @@ The message says what to fix, and nothing was changed. The usual ones:
   has issued numbers — only `enabled` and `startingValue` can still be changed over MCP; the rest is done in the CRM
   application. `backfill_numbering` is refused while numbering of the module is off
   (`Numbering of '…' is switched off…`): switch it on first.
-- **White-label** — `update_branding` answers `white-label is not active for this company; ask InflowCRM support` when
-  the feature is off (`isActive: false` in `get_branding`). [Ask InflowCRM](../contact.md) to switch it on; the assistant
-  cannot. Logo and favicon are never changed over MCP.
+- **Logo and favicon** — `update_branding` refuses an image that is not a PNG, JPEG, WebP or GIF (a favicon may also
+  be ICO — SVG is not supported), whose content does not match the `mimeType` sent, that is over 1 MB decoded, whose
+  base64 is invalid or cut off, or whose file name is empty after special characters are removed. The file type is
+  judged by the content, not by the name. Send the file again as `{ name, mimeType, contentBase64 }`; a logo or favicon
+  cannot be removed over MCP.
 - **Company data** — a NIP with a wrong checksum, a knowledge base link that is not `https://`, a start page
   (`desktopRoute`) that is not in `allowedDesktopRoutes` of `get_company_settings`.
 - **Module names** — a module that `list_modules` does not show as `renamable: true`, an empty or too long form
