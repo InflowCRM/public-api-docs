@@ -1043,7 +1043,7 @@ your plan includes potentials or orders, and, like the other configuration tools
 
 ### Company settings
 
-Module names, company data, record numbering and the white-label look: the settings an administrator changes in the CRM
+Module names, company data, record numbering and the white-label look (theme, tab title, logo, favicon): the settings an administrator changes in the CRM
 under **Settings**. They need the `settings:read` / `settings:write` scopes and the configuration tools enabled for the
 company, and they are available only to a **company administrator** (signed in) or an **API key** — never to an
 employee. Every write changes the setting for **all users of the company** and needs `confirm: true`.
@@ -1158,26 +1158,32 @@ settings.
 
 ### White-label look (branding)
 
-The colour theme and the browser tab title of the web app. Available only when the **white-label** feature is active
-for the company; the tools never switch it on.
+The colour theme, the browser tab title, the logo and the favicon of the web app. They work whether or not the
+**white-label** feature is switched on for the company; the tools never switch it on or off.
 
 #### `get_branding`
 - **Input:** none
-- **Output:** `{ theme, tabTitle, isActive, hasLogo, hasFavicon }` — `theme` is the name of the colour preset or `null`,
-  `tabTitle` the browser tab title or `null`, `isActive` whether white-label is on for the company, `hasLogo` /
-  `hasFavicon` whether an image is set (the images themselves are never returned).
+- **Output:** `{ theme, tabTitle, isActive, hasLogo, hasFavicon, logoName, faviconName }` — `theme` is the name of the
+  colour preset or `null`, `tabTitle` the browser tab title or `null`, `isActive` whether white-label is on for the
+  company (informational only, it does not limit `update_branding`), `hasLogo` / `hasFavicon` whether an image is set,
+  `logoName` / `faviconName` the file name of the image or `null` (the images themselves are never returned).
 
 #### `update_branding`
 Changes the look of the web app for all users of the company. Send only the fields to change.
 
-- **Input:** `{ theme?, tabTitle?, confirm: true }`
+- **Input:** `{ theme?, tabTitle?, logo?, favicon?, confirm: true }`
   - `theme`: the name of a preset — `inflowcrm`, `red-theme`, `green-theme`, `yellow-theme`, `orange-theme`,
     `blue-theme` or `green-orange-theme`. Colours cannot be chosen freely.
   - `tabTitle`: 1–60 characters, without `<`, `>`, control or invisible characters.
-- **Only when white-label is active** (`isActive` in `get_branding`). Otherwise the call fails with
-  `VALIDATION_ERROR: white-label is not active for this company; ask InflowCRM support` — the company asks
-  [InflowCRM](../contact.md) to switch it on.
-- **No logo or favicon:** they cannot be changed here, only in the web app (Settings, "Logo i kolory"); they stay as
-  they are.
+  - `logo`, `favicon`: each `{ name, mimeType, contentBase64 }` — the file name, its MIME type and the file content as
+    base64 (a `data:` URL prefix is tolerated). The type is judged by the file content and must match `mimeType` (and
+    the MIME type of the `data:` prefix, if given). Logo: PNG, JPEG, WebP or GIF. Favicon: the same or ICO. SVG is not
+    supported. At most 1 MB per image, decoded.
+- **Refusals:** a wrong file type, a `mimeType` that does not match the content, an image over 1 MB, base64 that is
+  invalid or cut off, or a file name that is empty after special characters are removed fail with `VALIDATION_ERROR`;
+  nothing is changed.
+- **No removal:** a logo or favicon cannot be removed over MCP, only replaced; one you do not send stays as it is.
+- **White-label flag:** not required, and never changed by this tool (`isActive` in `get_branding` is informational).
+- The images are never returned or written to the audit log — only their file names.
 - Open sessions may show the change only after the web app is reloaded.
-- **Output:** the settings as in `get_branding`.
+- **Output:** the settings as in `get_branding`, with the file names of the images.

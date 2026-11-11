@@ -39,7 +39,7 @@ Source: [`skills/inflowcrm-mcp`](https://github.com/InflowCRM/public-api-docs/tr
   delete and may over-count), one confirmation for a whole batch (one `delete_field`
   call for several fields), `confirm: true` only after the user agreed, users with a role are moved in the CRM;
   for company settings: change only what was asked, numbering applies to new records only and its backfill is
-  irreversible, white-label tools work only when the feature is active, a refusal is not worked around; for
+  irreversible, a logo or favicon is sent as base64 file content and never invented, a refusal is not worked around; for
   pipelines: the user is told how many records a stage holds and picks the stage that receives them
   (`moveRecordsToStageId`) before `delete_stage`; role answers are a summary unless `view: "full"` is asked for.
 - **Recovering from errors** — what each validation message means and how to fix the call.

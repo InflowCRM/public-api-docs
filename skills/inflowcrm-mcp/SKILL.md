@@ -237,9 +237,11 @@ tools an employee has follow their role — a missing tool means the role does n
     `none` the `format` needs the matching date tokens. `backfill_numbering` numbers the records that have none, in the
     background, and is **irreversible**: warn the user before asking for `confirm`, and that date tokens get the day the
     backfill runs; start it about a minute after changing the settings, and only with numbering switched on.
-  - **Branding:** `get_branding` first; `update_branding` works only when `isActive` is `true` (otherwise tell the user
-    to ask InflowCRM support — you cannot switch white-label on). Only `theme` (a preset name from the tool) and
-    `tabTitle`; logo and favicon are changed in the web app.
+  - **Branding:** `get_branding` first, show the user the state before and after; `update_branding` needs no active
+    white-label (`isActive` is informational). `theme` (a preset name from the tool), `tabTitle`, and a `logo` /
+    `favicon` as `{ name, mimeType, contentBase64 }`: you need the real file content in base64 (PNG, JPEG, WebP, GIF;
+    favicon also ICO; no SVG; max 1 MB) — if you do not have the file, ask the user for it and never invent an image.
+    A logo or favicon cannot be removed over MCP.
   - A refusal (`VALIDATION_ERROR`) is final for that value: fix it from the message or tell the user, never try to get
     the same effect another way.
 - `update_field`, `create_list_view`, `update_list_view`, `create_role` and every delete of a field, list view or
@@ -265,7 +267,7 @@ Validation messages start with `VALIDATION_ERROR: ` (a bulk item's `error` too);
 | `Unknown tag(s) in …` | Use tags from `get_template_tags` |
 | `… call again with confirm: true` / invalid `confirm` | Show the change to the user, get their OK, then call again with `confirm: true` |
 | `VALIDATION_ERROR: Numbering of '…' is switched off…` | Ask the user whether to switch numbering on (`update_numbering_settings`, `enabled: true`) first |
-| `VALIDATION_ERROR: white-label is not active…` | Tell the user to ask InflowCRM support; you cannot switch it on |
+| `VALIDATION_ERROR` on a logo or favicon (type, `mimeType` mismatch, over 1 MB, bad base64) | Send a PNG, JPEG, WebP or GIF (favicon also ICO) under 1 MB, with the matching `mimeType`; ask the user for another file instead of converting or inventing one |
 | A numbering change refused for a module that already has numbers | Only `enabled` and `startingValue` can change over MCP; tell the user to change the rest in the CRM |
 | `… must not contain < >, control or invisible characters.` (for a pick-list value: `… must not contain <, control or invisible characters.`) | Ask the user for a plain text name or value; do not work around it |
 | `Stage 'X' holds N record(s). Pass moveRecordsToStageId…` | Tell the user the number, ask which other stage of the pipeline should receive them, call `delete_stage` again with `moveRecordsToStageId` |

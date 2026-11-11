@@ -201,7 +201,7 @@ They add **33 tools** (up to **76** in total):
 | Module names | `update_module_names` (what the company calls a module; `list_modules` shows which can be renamed) |
 | Company data | `get_company_settings`, `update_company_settings` (name, address, NIP, start page, knowledge base link) |
 | Record numbering | `get_numbering_settings`, `update_numbering_settings`, `backfill_numbering` |
-| Look of the web app | `get_branding`, `update_branding` (colour theme and tab title, only when white-label is active) |
+| Look of the web app | `get_branding`, `update_branding` (colour theme, tab title, logo and favicon) |
 
 They are available only to a **company administrator** (signed in) or an **API key** — never to an employee.
 Configuration changes apply to **every user of the company** at once. The settings tools return only the values listed in
