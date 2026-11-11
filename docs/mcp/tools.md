@@ -47,6 +47,8 @@ Lists the modules available to the API key with the singular/plural names config
 - **Output:** `[{ moduleName, singular, plural, systemModuleName, renamable }]` — pass `systemModuleName` as `module`.
   - `singular` and `plural` each carry all three forms the company uses: `{ denominator, genitive, accusative }`
     (e.g. `Klient`, `Klienta`, `Klienta`). A form the company never set shows the default name.
+  - Default names are Polish (`Klient`, `Klienci`, …) — what the CRM shows until the company renames a module.
+    Module keys (`customer`) and the names used by REST, GraphQL and integrations stay English.
   - `renamable`: `true` when [`update_module_names`](#update_module_names) can rename the module for this company and the caller has the admin tools; always `false` for employees and companies without the admin tools.
 
 ### `get_module_fields`
@@ -198,18 +200,22 @@ parent record you cannot see.
 Creates a record and returns it with its new `id`. Required fields must be set.
 
 - **Input:** `{ module, data, files? }`
+- **`warnings`:** [read-only keys](#read-only-keys-and-warnings) in `data` are ignored and named in a second text
+  block of the answer, `{"warnings":["Ignored read-only field(s): …"]}`.
 
 ### `update_record`
 Updates only the fields listed in `data`; other fields stay unchanged. Files sent as `standaloneAttachments` are
 appended to the record's files; a file sent for a File field replaces that field's value.
 
 - **Input:** `{ module, recordId, data, files? }` — at least one field or one file.
+- **`warnings`:** as in `create_record` — see [read-only keys](#read-only-keys-and-warnings).
 
 ### `create_records` / `update_records` (bulk)
 1–50 records of one module per call; each item is `{ data }` (create) or `{ recordId, data }` (update). Items are
 processed independently.
 
-- **Output:** `{ results: [{ index, ok: true, id } | { index, ok: false, error }], succeeded, failed }`
+- **Output:** `{ results: [{ index, ok: true, id, warnings? } | { index, ok: false, error }], succeeded, failed }` —
+  `warnings` of an item are the [read-only keys](#read-only-keys-and-warnings) it sent.
 - `isError` is set only when every item failed. When at least one item failed, the answer carries a second text
   block `Reference: <id>…` — quote it if you report the failure (`report_problem`, `errorRefs`).
 - **Each `recordId` once.** `update_records` with the same `recordId` twice in one call (ids are compared without regard
@@ -228,7 +234,33 @@ processed independently.
 ### `delete_record`
 Moves a record to the CRM trash. → `{ id, deleted: true }`
 
-- **Input:** `{ module, recordId }`
+- **Input:** `{ module, recordId, confirm: true }`
+- **`confirm: true` is required** (exactly the boolean `true`; `false` and the string `"true"` are refused) — send it only
+  after the user agreed to the deletion. Without it:
+  `VALIDATION_ERROR: This change needs confirm: true. Ask the user to approve it, then call again with confirm: true.`
+  and the record stays. The refusal is audited like any other.
+- The right to delete on the module is checked **first**: an employee whose role does not allow it gets
+  `PERMISSION_DENIED`, not a request for `confirm`.
+
+### Read-only keys and `warnings`
+
+`data` of a write may carry the system keys a record read returns — `id`, `owner`, `createdBy`, `modifiedBy`,
+`createdTime`, `modifiedTime`, `recordNumber` (plus any key your company added to the public API system fields). They
+are **never stored**; sending them is not an error, so a record fetched with `get_record` can be sent back whole. A write
+that ignored one answers with a warning instead of reporting success silently:
+
+`Ignored read-only field(s): createdBy, recordNumber — they cannot be changed through MCP.`
+
+- `create_record` / `create_records`: every such key in `data` is reported.
+- `update_record` / `update_records`: a key is reported when its value **differs** from the stored one; the record's
+  own `id` and unchanged values (a record sent back as read) are not. A key the connected user cannot read is
+  reported whatever its value, so the warning never reveals a hidden value.
+- When `owner` is among the ignored keys and the user may write the module's owner relation, the warning names it:
+  `To change the record owner, set '<apiFieldName>'.`
+- Shape: single tools add a second text block `{"warnings":[…]}`; bulk tools put `warnings` in the item. Without
+  warnings the answer is unchanged.
+- A field an employee's role cannot edit is still refused by name, not turned into a warning — see
+  [Fields an employee cannot read or change](#fields-an-employee-cannot-read-or-change).
 
 ### `data` — field values
 
@@ -316,7 +348,8 @@ delete anywhere has no `delete_record`; one who cannot create records has no `cr
 create **and** bulk import on the same module, `update_records` modify **and** bulk edit; the message tools need the
 right to see e-mail or SMS (and a module with messages); `get_pipelines` and `get_pipeline_summary` need the right to
 see orders or potentials; `list_record_notes` needs the right to see notes **and** at least one parent module;
-`generate_document` needs the right to see documents; each list view tool needs its own list right. A tool that is not
+`generate_document` needs the right to see documents; each template tool needs the matching right (see, create,
+modify or delete) on SMS, e-mail or document templates; each list view tool needs its own list right. A tool that is not
 listed cannot be called (the server answers like for an unknown tool).
 
 - **Administrators and API keys are not filtered** — an API key tied to an employee account included: their tool list
@@ -510,7 +543,9 @@ sending stays in the CRM (manually or by a template's automatic sending, which t
   `PERMISSION_DENIED: This API key's role is not allowed to … templates.`
 - Creates, updates and deletes of all template kinds share one limit: **60 calls per 5 minutes**
   (`Too many template writes, retry in N s.`).
-- Deleting a template moves it to the CRM trash and always needs `confirm: true`.
+- Deleting a template moves it to the CRM trash and always needs `confirm: true`. Unlike `delete_record`, a missing or
+  non-`true` `confirm` here fails input validation of the call (the argument must be exactly `true`), not a
+  `VALIDATION_ERROR: This change needs confirm: true` answer.
 - `autoSending` (read only) shows `{ enabled, autoSendingEnabled }`; when both are `true` the CRM sends the template
   by itself, so changing its content needs `confirm: true` (see below).
 
@@ -633,7 +668,16 @@ change an administrator or an API key makes applies to **all users of the compan
 
 - Creates, updates and deletes of fields, list views, roles and squads, and every write of the
   [company settings tools](#company-settings) (module names, company data, numbering, backfill, branding), share one
-  limit: **30 calls per 5 minutes** (`Too many configuration changes, retry in N s.`).
+  limit: **30 calls per 5 minutes** (`Too many configuration changes, retry in N s.`). A call refused **before** it
+  wrote anything — validation, a name that is taken, an id that does not exist, no permission, a missing `confirm` —
+  does not use up the limit. A call that failed after the write began, and a call refused by the limit itself, does.
+- **Text rules:** field labels and descriptions, pick-list values, and the names of roles, squads and list views must not
+  contain `<` or `>`, control characters or invisible characters (a description may contain line breaks and tabs; a
+  pick-list value may contain `>`, e.g. `>35`, but not `<`). Otherwise
+  `VALIDATION_ERROR: <input> must not contain < >, control or invisible characters.` Existing items with such text can
+  still be renamed to a clean name and deleted.
+- **Audit:** a successful configuration change is recorded in the audit log with the values it changed, before and
+  after (see [Built-in safeguards](README.md#built-in-safeguards)).
 - `update_field`, `delete_field`, `create_list_view`, `update_list_view`, `delete_list_view`, `create_role`,
   `update_role`, `delete_role`, `delete_squad`, `add_users_to_squad`, `remove_users_from_squad`,
   `update_module_names`, `update_company_settings`, `update_numbering_settings`, `backfill_numbering` and
@@ -808,7 +852,12 @@ Each tool appears only when the role allows what it does (see
 - `warnings` appears when the saved role is inconsistent — see [`get_role`](#get_role).
 
 #### `get_role`
-- **Input:** `{ roleId }` → `{ roleId, name, userCount, blockedUserCount?, modules: [{ module, see, create, modify, delete, … }], customPermissions, warnings? }`
+- **Input:** `{ roleId, view? }` → `{ roleId, name, userCount, blockedUserCount?, modules: [{ module, see, create, modify, delete, … }], modulesAtCrmDefaults, viewNote, customPermissions, warnings? }`
+- **`view`** (also on `create_role` and `update_role`; `list_roles` has none): `summary` (default) or `full`. The summary
+  lists in `modules` only the modules whose rights **differ from the CRM defaults**, plus the modules the call itself
+  changed; the others are named in `modulesAtCrmDefaults` (their rights are the defaults, not "none") and `viewNote`
+  says how to get the rest. `view: "full"` returns every module with all its flags, as before. Use `full` when you
+  need the whole matrix, e.g. to show the user a role before and after a change.
 - Module rights: `see`, `share`, `create`, `modify`, `delete`, `seeOthers`, `modifyOthers`, `deleteOthers`,
   `seeSquad`, `modifySquad`, `modifyShared`, `deleteSquad`, `deleteShared`, `seeRole`, `modifyRole`, `deleteRole`,
   `massEdit`, `massDelete`, `massExport`, `massImport`. Modules marked `derivedFrom` are computed from
@@ -859,8 +908,10 @@ them instead of correcting the role silently (a correction would grant more than
   CRM role settings.
 
 #### `create_role`
-- **Input:** `{ name, confirm: true, copyFromRoleId?, modules?, customPermissions? }` — `name` unique; without `copyFromRoleId` the
-  role starts from the CRM defaults, with it from a copy of that role (including its field rules).
+- **Input:** `{ name, confirm: true, copyFromRoleId?, modules?, customPermissions?, view? }` — `name` unique; without
+  `copyFromRoleId` the role starts from the CRM defaults, with it from a copy of that role (including its field rules).
+  The CRM defaults are broad: see, create, modify and delete on records of other people, of the squad and of the
+  role, with sharing and the mass actions off. To start narrower, copy a suitable role or send `modules` explicitly.
 - `modules`: `[{ module, <right>: true | false, … }]`, each module once; `customPermissions`: e.g.
   `canSendEmail`, `canSendSms`, `canSeeEmail` (`none` | `see` | `seeSquad` | `seeOthers`), `canEditEmailTemplate`
   (`none` | `modify` | `modifyShared` | `modifySquad` | `modifyOthers`)…
@@ -875,7 +926,7 @@ them instead of correcting the role silently (a correction would grant more than
   problem lies in a module MCP cannot change, or that holds duplicate rules, is refused with
   `VALIDATION_ERROR: This role cannot be copied over MCP: …` — correct it in the CRM role settings or create the role
   without `copyFromRoleId`. `get_role.warnings` of the source tells you beforehand.
-- **Output:** the new role (`userCount: 0`).
+- **Output:** the new role (`userCount: 0`), as a `view` (summary by default).
 
 #### `update_role`
 Changes the name, module rights (only the rights you send) or custom permissions (only the keys you send) of a role.
@@ -883,8 +934,8 @@ Every user holding the role is affected — the answer's `userCount` says how ma
 adds blocked ones, when there are any). The call is checked against the dependencies in
 [Rights depend on each other](#rights-depend-on-each-other).
 
-- **Input:** `{ roleId, confirm: true, name?, modules?, customPermissions? }`
-- **Output:** the role after the change.
+- **Input:** `{ roleId, confirm: true, name?, modules?, customPermissions?, view? }`
+- **Output:** the role after the change, as a `view` (summary by default; the modules you changed are always listed).
 
 #### `delete_role`
 - **Input:** `{ roleId, confirm: true }` → `{ deleted: true, roleId, name, listViewsReferencingRole }`
@@ -937,7 +988,7 @@ write answers with the settings as they are after the change. A refused change i
 changes nothing; do not try to get around it — fix the value or tell the user.
 
 #### `update_module_names`
-Changes how the company calls a module (for example "Klient" instead of "Customer") in menus, buttons and table
+Changes how the company calls a module (for example "Klient" → "Odbiorca") in menus, buttons and table
 headers. The module key never changes: integrations and the API keep using `systemModuleName`.
 
 - **Input:** `{ module, singular?, plural?, confirm: true }`; `singular` and `plural` are each
@@ -951,14 +1002,19 @@ headers. The module key never changes: integrations and the API keep using `syst
   that is not one of the renamable modules at all is refused earlier, as invalid arguments.
 - **Limits:** a form must not be empty and is at most 60 characters; `<`, `>`, control and invisible characters are
   refused.
-- **Output:** `{ module, singular: { denominator, genitive, accusative }, plural: { denominator, genitive, accusative } }`
-  — the resulting forms.
+- **Output:** `{ module, singular: { denominator, genitive, accusative }, plural: { denominator, genitive, accusative }, warnings? }`
+  — the resulting forms. `warnings` names the forms you did **not** send that still carry the default name, e.g.
+  `Forms still at the default name: singular.genitive ("Klienta") — send them too if the module should be fully renamed.`
+  A partial set is still accepted; with all six forms of your own there is no warning.
 
 #### `get_company_settings`
 - **Input:** none
-- **Output:** `{ companyName, street, number, zipCode, city, nip, desktopRoute, companyKnowledgeBase: { link }, allowedDesktopRoutes }`
+- **Output:** `{ companyName, street, number, zipCode, city, nip, desktopRoute, companyKnowledgeBase: { link }, allowedDesktopRoutes, desktopRouteModules }`
   — a value that was never set is `null`. `desktopRoute` is the start page after logging in;
   `allowedDesktopRoutes` lists the start pages this company may pick. Nothing else is returned.
+- `desktopRouteModules`: `[{ route, module, name }]` — the same routes, each with the `module` its page opens and the
+  `name` this company gives that module (plural). The route values are fixed Polish labels (e.g. `Lista Klientów`) that
+  do **not** follow module renames; use `name` to find the route of a module the company calls differently.
 
 #### `update_company_settings`
 Changes the company data shown in Settings. Send only the fields to change; the others keep their value.

@@ -74,9 +74,16 @@ instead: check the key, then see [401](#_401-unauthorized).
 The key or sign-in is missing, unknown or expired, the user is blocked or deleted, or the company account is inactive. Check
 the key was copied whole and is sent as `Authorization: Bearer YOUR_API_KEY`. Signed-in apps: disconnect and connect again.
 
+### 403 "MCP is not enabled for this company"
+
+The key (or sign-in) is valid, but MCP is not enabled for your company. The answer carries
+`error.code: "mcp_disabled"` and the message `MCP is not enabled for this company. Ask your CRM administrator or InflowCRM support to enable it.`
+[Ask InflowCRM](../contact.md) to enable it. Earlier versions answered `404 Not Found` here.
+
 ### 404 Not Found
 
-The key is valid, but MCP is not enabled for your company. [Ask InflowCRM](../contact.md) to enable it.
+Rare and temporary: the server could not read your company's settings. Try again; if it persists,
+[contact InflowCRM](../contact.md).
 
 ### 405 Method Not Allowed
 

@@ -9,8 +9,9 @@ The MCP server sits on top of the same engine as the [REST API](../rest-api/READ
 (by **Api field name**), the same tenant isolation and record permissions.
 
 > **Availability:** MCP is a paid add-on. It is switched on per company by InflowCRM — contact
-> [support](../contact.md) to enable it. Until it is enabled the endpoint answers `404 Not Found` for an API key,
-> and signing in says that MCP is not enabled in that CRM.
+> [support](../contact.md) to enable it. Until it is enabled the endpoint answers `403` with
+> `MCP is not enabled for this company. Ask your CRM administrator or InflowCRM support to enable it.` for a valid
+> API key, and signing in says that MCP is not enabled in that CRM.
 
 ---
 
@@ -123,7 +124,8 @@ apiKey: YOUR_API_KEY
 | Response | Meaning |
 |---|---|
 | `401 {"error":"Unauthorized"}` | Missing, unknown or expired credential; the user is blocked/deleted, or the company account is inactive. The `WWW-Authenticate` header points OAuth clients to the metadata |
-| `404 Not Found` | The credential is valid but MCP is not enabled for the company |
+| `403` with `error.code: "mcp_disabled"` | The credential is valid but MCP is not enabled for the company. Not a `401`, so OAuth clients do not restart their sign-in |
+| `404 Not Found` | Rare: the server could not read the company's feature flag. Retry; if it persists, contact support |
 | `403` (JSON-RPC `Forbidden origin`) | The request carries a browser `Origin` header that is not allow-listed — call MCP from a server-side client |
 | `429` (JSON-RPC `Rate limit exceeded`) | Too many requests — see *Rate limits* below |
 
@@ -239,7 +241,7 @@ Tools that delete or change sensitive configuration refuse to run until the assi
 
 | Tool | When `confirm: true` is needed |
 |---|---|
-| `delete_sms_template`, `delete_email_template`, `delete_document_template` | Always |
+| `delete_record`, `delete_sms_template`, `delete_email_template`, `delete_document_template` | Always |
 | `update_sms_template`, `update_email_template` | When the template sends automatically and its content changes |
 | `update_document_template` | When the document is attached to an automatically sent template and its content changes |
 | `update_field`, `delete_field`, `create_list_view`, `update_list_view`, `delete_list_view`, `create_role`, `update_role`, `delete_role` | Always — except the list-view tools for a signed-in employee working on their own private views, which need no `confirm` |
@@ -305,7 +307,9 @@ below explains. Every tool belongs to a scope:
   content are removed).
 - **Audit log** — every tool call that passes input validation is logged with the tool name, argument *names*,
   affected record ids, result, IP address and user agent — and, for a signed-in user, which connected app made the
-  call. Argument values are not stored in the audit log.
+  call. Argument values are not stored in the audit log, with one exception: a successful change made with the
+  [configuration tools](#configuration-tools) also records the values it changed, before and after (only the changed
+  keys, no secrets, personal data such as e-mails and phone numbers redacted, long values shortened).
 
 ### Prompt injection
 
@@ -324,7 +328,7 @@ confirmation on for deletes, bulk tools, template writes and configuration tools
 | Bulk writes | **10 calls per 5 minutes** (≤ 500 records) | `create_records` + `update_records` together |
 | Document generation | **20 calls per 5 minutes** | `generate_document` |
 | Template writes | **60 calls per 5 minutes** | create / update / delete of SMS, e-mail and document templates together |
-| Configuration writes | **30 calls per 5 minutes** | create / update / delete of fields, list views, roles and squads, and every settings write (module names, company data, numbering, backfill, branding), together |
+| Configuration writes | **30 calls per 5 minutes** (a call refused before it wrote anything is not counted) | create / update / delete of fields, list views, roles and squads, and every settings write (module names, company data, numbering, backfill, branding), together |
 | Failed authentication | 300 per 5 minutes per IP | counts `401` responses; once exceeded, every request from that IP gets `429` until the window resets |
 
 The request limit returns HTTP `429`; the per-tool limits return a tool error such as
