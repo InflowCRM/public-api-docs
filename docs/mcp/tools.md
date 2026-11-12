@@ -1,7 +1,7 @@
 # MCP Tools Reference
 
-All tools of the InflowCRM MCP server: up to **43**, plus **27 configuration tools** when they are enabled for your
-company (up to 70). Tools your plan, the enabled features or your account do not allow are not listed at all —
+All tools of the InflowCRM MCP server: up to **43**, plus **33 configuration tools** when they are enabled for your
+company (up to 76). Tools your plan, the enabled features or your account do not allow are not listed at all —
 e.g. pipeline tools appear only when your plan includes potentials or orders. See [MCP Server](README.md) for
 connecting, authentication and limits.
 
@@ -13,7 +13,8 @@ connecting, authentication and limits.
 - Ids are 24-character hex strings (`recordId`, `userId`, `fileId`, `templateId`, pipeline `process`); fields are
   identified by `fieldId` (e.g. `cf12`), list views by `listId`, roles by `roleId`.
 - Unknown top-level arguments are rejected (input validation error). Every record in an answer has an `id`.
-- Read-only tools are marked with the MCP `readOnlyHint`; the delete tools, `update_role` and the company settings
+- Read-only tools are marked with the MCP `readOnlyHint`; the delete tools, `update_role`, the pipeline tools that
+  need `confirm` (`update_pipeline`, `update_stage`, `reorder_stages`, `delete_stage`) and the company settings
   writes (`update_module_names`, `update_company_settings`, `update_numbering_settings`, `backfill_numbering`,
   `update_branding`) carry `destructiveHint`.
 - Tools that need `confirm: true` refuse to run without it — set it only after the user agreed.
@@ -47,6 +48,8 @@ Lists the modules available to the API key with the singular/plural names config
 - **Output:** `[{ moduleName, singular, plural, systemModuleName, renamable }]` — pass `systemModuleName` as `module`.
   - `singular` and `plural` each carry all three forms the company uses: `{ denominator, genitive, accusative }`
     (e.g. `Klient`, `Klienta`, `Klienta`). A form the company never set shows the default name.
+  - Default names are Polish (`Klient`, `Klienci`, …) — what the CRM shows until the company renames a module.
+    Module keys (`customer`) and the names used by REST, GraphQL and integrations stay English.
   - `renamable`: `true` when [`update_module_names`](#update_module_names) can rename the module for this company and the caller has the admin tools; always `false` for employees and companies without the admin tools.
 
 ### `get_module_fields`
@@ -145,7 +148,15 @@ parent record you cannot see.
 { "status": "Aktywny", "city": "Kraków" }
 ```
 
-- A **date-only** value (`"2026-05-10"`) on a Date/Datetime field matches the whole day (server time zone); a value with a time matches exactly.
+- A date **without a time** on a Date or Datetime field matches that **whole day in Europe/Warsaw time**, midnight to
+  midnight (23 or 25 hours long on the days the clocks change). Write it as `2026-05-10`, `2026/05/10` or in the
+  field's own date format (`10.05.2026` for `dd.MM.yyyy`; a two-digit year such as `10.05.26` for `dd.MM.yy` works too).
+  A record saved at `2026-01-31T23:30:00Z` is on `2026-02-01` in Warsaw, so it matches `2026-02-01`, not `2026-01-31`.
+- A full ISO timestamp (`2026-05-10T10:00:00+02:00`) matches that exact moment. Write the offset (`Z`, `+02:00`)
+  right after the time, with no space; a time without an offset is read in the server's time zone.
+- Any other notation of a date — a month name (`May 10 2026`) or a zone written in the text
+  (`2026/05/10 GMT+0900`) — matches no records; it is not an error.
+- For a day in `filters`, `count_records` and `pagination.total` of `search_records` give the same number of records.
 - A **DateRange** field takes `[from, to]` and matches records whose range **starts** between `from` and `to`:
   `{ "eventDate": ["2026-05-10", "2026-05-20"] }`. Leave `from` empty (`["", "2026-05-20"]`) for "starts up to";
   with only `from` it matches records starting on that day.
@@ -177,8 +188,23 @@ parent record you cannot see.
 `advancedFilter` also accepts the system fields `id`, `createdTime`, `modifiedTime`, `createdBy`, `modifiedBy`,
 `owner`, `recordNumber`. Unknown field names are rejected with the list of valid ones.
 
-> Range conditions (`greater`, `lower`, …) on dates are supported for `createdTime` and `modifiedTime`. For your own
-> Date fields use `filters` (a whole day) or a DateRange field.
+> **Dates in `advancedFilter`.** On a Date or Datetime field and on `createdTime` / `modifiedTime`, a date without a
+> time stands for its **whole day in Europe/Warsaw time**. Write it as `2026-05-10` or in the field's own date
+> format on your own fields, and as `2026-05-10` or `2026/05/10` on `createdTime` / `modifiedTime`. `greater` means
+> after that day, `greaterOrEqual` from its start, `lower` before it, `lowerOrEqual` up to its end. A full ISO timestamp is compared
+> as the moment it names; write its offset, because a time without an offset is read in the server's time zone.
+>
+> - `equal`, `notEqual`, `in` and `notIn` with a date without a time are refused:
+>   `VALIDATION_ERROR: A date without a time stands for a whole day in Europe/Warsaw, which one … cannot express.`
+>   Use two conditions in one `AND` filter (`greaterOrEqual` the day, `lower` the next day), a full timestamp, or
+>   `filters` on a Date field. To match everything outside a day, use an `OR` filter of two conditions (`lower` the
+>   day, `greaterOrEqual` the next day).
+> - Any other value on a Date or Datetime field is refused with `VALIDATION_ERROR: Wrong value type: …`, including a
+>   year written with a sign or with six digits (`+002026-05-10T12:00:00Z`). On `createdTime` and `modifiedTime` a
+>   value the date storage accepts is compared as it reads it, and text it cannot read (`next tuesday`) is refused.
+> - A day is compared with stored date values. A record that holds its date as ISO text instead of a date value is
+>   found by `filters` but not by `advancedFilter`.
+> - A DateRange field takes `filters` with `[from, to]`.
 
 **Rules**
 
@@ -198,18 +224,22 @@ parent record you cannot see.
 Creates a record and returns it with its new `id`. Required fields must be set.
 
 - **Input:** `{ module, data, files? }`
+- **`warnings`:** [read-only keys](#read-only-keys-and-warnings) in `data` are ignored and named in a second text
+  block of the answer, `{"warnings":["Ignored read-only field(s): …"]}`.
 
 ### `update_record`
 Updates only the fields listed in `data`; other fields stay unchanged. Files sent as `standaloneAttachments` are
 appended to the record's files; a file sent for a File field replaces that field's value.
 
 - **Input:** `{ module, recordId, data, files? }` — at least one field or one file.
+- **`warnings`:** as in `create_record` — see [read-only keys](#read-only-keys-and-warnings).
 
 ### `create_records` / `update_records` (bulk)
 1–50 records of one module per call; each item is `{ data }` (create) or `{ recordId, data }` (update). Items are
 processed independently.
 
-- **Output:** `{ results: [{ index, ok: true, id } | { index, ok: false, error }], succeeded, failed }`
+- **Output:** `{ results: [{ index, ok: true, id, warnings? } | { index, ok: false, error }], succeeded, failed }` —
+  `warnings` of an item are the [read-only keys](#read-only-keys-and-warnings) it sent.
 - `isError` is set only when every item failed. When at least one item failed, the answer carries a second text
   block `Reference: <id>…` — quote it if you report the failure (`report_problem`, `errorRefs`).
 - **Each `recordId` once.** `update_records` with the same `recordId` twice in one call (ids are compared without regard
@@ -228,7 +258,34 @@ processed independently.
 ### `delete_record`
 Moves a record to the CRM trash. → `{ id, deleted: true }`
 
-- **Input:** `{ module, recordId }`
+- **Input:** `{ module, recordId, confirm: true }`
+- **`confirm: true` is required** (exactly the boolean `true`; `false` and the string `"true"` are refused) — send it only
+  after the user agreed to the deletion. Without it:
+  `VALIDATION_ERROR: This change needs confirm: true. Ask the user to approve it, then call again with confirm: true.`
+  and the record stays. The refusal is audited like any other.
+- The right to delete on the module is checked **first**: an employee whose role does not allow it gets
+  `PERMISSION_DENIED`, not a request for `confirm`.
+
+### Read-only keys and `warnings`
+
+`data` of a write may carry the system keys a record read returns — `id`, `owner`, `createdBy`, `modifiedBy`,
+`createdTime`, `modifiedTime`, `recordNumber` (plus any key your company added to the public API system fields). They
+are **never stored**; sending them is not an error, so a record fetched with `get_record` can be sent back whole.
+(Exception: a key that is also the Api field name of a field of the module — e.g. a legacy field called `owner` — is that
+field, is written like any other and gets no warning.) A write that ignored one answers with a warning instead of reporting success silently:
+
+`Ignored read-only field(s): createdBy, recordNumber — they cannot be changed through MCP.`
+
+- `create_record` / `create_records`: every such key in `data` is reported.
+- `update_record` / `update_records`: a key is reported when its value **differs** from the stored one; the record's
+  own `id` and unchanged values (a record sent back as read) are not. A key the connected user cannot read is
+  reported whatever its value, so the warning never reveals a hidden value.
+- When `owner` is among the ignored keys and the user may write the module's owner relation, the warning names it:
+  `To change the record owner, set '<apiFieldName>'.`
+- Shape: single tools add a second text block `{"warnings":[…]}`; bulk tools put `warnings` in the item. Without
+  warnings the answer is unchanged.
+- A field an employee's role cannot edit is still refused by name, not turned into a warning — see
+  [Fields an employee cannot read or change](#fields-an-employee-cannot-read-or-change).
 
 ### `data` — field values
 
@@ -316,7 +373,8 @@ delete anywhere has no `delete_record`; one who cannot create records has no `cr
 create **and** bulk import on the same module, `update_records` modify **and** bulk edit; the message tools need the
 right to see e-mail or SMS (and a module with messages); `get_pipelines` and `get_pipeline_summary` need the right to
 see orders or potentials; `list_record_notes` needs the right to see notes **and** at least one parent module;
-`generate_document` needs the right to see documents; each list view tool needs its own list right. A tool that is not
+`generate_document` needs the right to see documents; each template tool needs the matching right (see, create,
+modify or delete) on SMS, e-mail or document templates; each list view tool needs its own list right. A tool that is not
 listed cannot be called (the server answers like for an unknown tool).
 
 - **Administrators and API keys are not filtered** — an API key tied to an employee account included: their tool list
@@ -335,7 +393,11 @@ listed cannot be called (the server answers like for an unknown tool).
 ### `get_pipelines`
 Pipelines (sales processes) of `potential` or `order` with their stage names.
 
-- **Input:** `{ module }` → `[{ id, systemLabel, stagesNames: [...] }]`
+- **Input:** `{ module }` → `[{ id, systemLabel, stagesNames: [...], stages: [{ id, name }] }]`
+- `id` is the pipeline id (a record's `process`); `stages` gives each stage's id, in order — the ids are for the
+  [pipeline configuration tools](#sales-pipelines-and-stages) only. Records are still set by stage **name**. A legacy
+  stage without an id is missing from `stages` (and cannot be changed over MCP), so `stages` can be shorter than
+  `stagesNames`.
 
 ### `get_pipeline_summary`
 Record count per stage and the sum of the value per currency — a funnel report without reading records.
@@ -510,7 +572,9 @@ sending stays in the CRM (manually or by a template's automatic sending, which t
   `PERMISSION_DENIED: This API key's role is not allowed to … templates.`
 - Creates, updates and deletes of all template kinds share one limit: **60 calls per 5 minutes**
   (`Too many template writes, retry in N s.`).
-- Deleting a template moves it to the CRM trash and always needs `confirm: true`.
+- Deleting a template moves it to the CRM trash and always needs `confirm: true`. Unlike `delete_record`, a missing or
+  non-`true` `confirm` here fails input validation of the call (the argument must be exactly `true`), not a
+  `VALIDATION_ERROR: This change needs confirm: true` answer.
 - `autoSending` (read only) shows `{ enabled, autoSendingEnabled }`; when both are `true` the CRM sends the template
   by itself, so changing its content needs `confirm: true` (see below).
 
@@ -623,7 +687,8 @@ Official name and address of a Polish company from the GUS (REGON) registry.
 
 ## Configuration tools
 
-Fields, saved list views, roles, squads, module names, company data, record numbering and the white-label look —
+Fields, saved list views, roles, squads, sales pipelines and their stages, module names, company data, record
+numbering and the white-label look —
 **only when InflowCRM has enabled the configuration tools for your company**, and
 only for a company administrator (signed in) or an API key. A signed-in employee does not get them, with one exception:
 the four [list view tools](#saved-list-views), which work for the employee's **own private views** (below). Every
@@ -631,16 +696,32 @@ change an administrator or an API key makes applies to **all users of the compan
 
 **Common rules**
 
-- Creates, updates and deletes of fields, list views, roles and squads, and every write of the
+- Creates, updates and deletes of fields, list views, roles, squads, pipelines and stages, and every write of the
   [company settings tools](#company-settings) (module names, company data, numbering, backfill, branding), share one
-  limit: **30 calls per 5 minutes** (`Too many configuration changes, retry in N s.`).
+  limit: **30 calls per 5 minutes** (`Too many configuration changes, retry in N s.`). A call refused **before** it
+  wrote anything — validation, a name that is taken, an id that does not exist, no permission, a missing `confirm` —
+  does not use up the limit. A call that failed after the write began, and a call refused by the limit itself, does.
+- **Text rules:** field labels and descriptions, pick-list values, and the names of roles, squads, list views, pipelines and stages must not
+  contain `<` or `>`, control characters or invisible characters (a description may contain line breaks and tabs; a
+  pick-list value may contain `>`, e.g. `>35`, but not `<`). Otherwise
+  `VALIDATION_ERROR: <input> must not contain < >, control or invisible characters.` — for a pick-list value
+  `VALIDATION_ERROR: <input> must not contain <, control or invisible characters.` Existing items with such text can
+  still be renamed to a clean name and deleted.
+- **Audit:** a successful change of fields, list views (the administrator tools), roles, squads (name), module names,
+  company data, numbering settings or branding is recorded in the audit log with the values it changed, before and
+  after. The pipeline and stage tools, `backfill_numbering` and the list view tools of a signed-in employee (their own
+  private views) are logged by tool name and ids only; squad membership changes record the user ids the call named and
+  how many users it moved, not the previous members (see
+  [Built-in safeguards](README.md#built-in-safeguards)).
 - `update_field`, `delete_field`, `create_list_view`, `update_list_view`, `delete_list_view`, `create_role`,
-  `update_role`, `delete_role`, `delete_squad`, `add_users_to_squad`, `remove_users_from_squad`,
-  `update_module_names`, `update_company_settings`, `update_numbering_settings`, `backfill_numbering` and
+  `update_role`, `delete_role`, `delete_squad`, `add_users_to_squad`, `remove_users_from_squad`, `update_pipeline`,
+  `update_stage`, `reorder_stages`, `delete_stage`, `update_module_names`, `update_company_settings`, `update_numbering_settings`, `backfill_numbering` and
   `update_branding` require `confirm: true` (exactly the boolean `true`) — send it only after the user agreed. A signed-in employee's
   own list views need no `confirm` (see below). For several changes, ask once for the whole batch.
 - Ids of other companies or deleted items → `RESOURCE_NOT_FOUND: … does not exist.` with the tool to call next.
-- Deletes are soft: the item disappears from the CRM, stored record values are kept.
+- Deletes are soft: the item disappears from the CRM, stored record values are kept. **Exception: `delete_stage`** removes
+  the stage from the pipeline for good, and the records it moves take the target stage's name (see
+  [`delete_stage`](#delete_stage)).
 
 ### Fields and pick lists
 
@@ -689,7 +770,8 @@ Changes one field. Send only what changes.
   and a `note` — update those records if the old value should disappear.
 - `hidden: true` also clears `required`. `defaultValue: null` clears the default.
 - Refused: hiding or making optional a required system field; changing pick lists that drive pipelines, stages or
-  statuses (change those in the CRM); a label another field already has.
+  statuses (pipelines and their stages have their own [tools](#sales-pipelines-and-stages); change statuses in the
+  CRM); a label another field already has.
 - **Output:** `{ module, field, removedPickListValues?, note? }`
 
 #### `delete_field`
@@ -808,7 +890,12 @@ Each tool appears only when the role allows what it does (see
 - `warnings` appears when the saved role is inconsistent — see [`get_role`](#get_role).
 
 #### `get_role`
-- **Input:** `{ roleId }` → `{ roleId, name, userCount, blockedUserCount?, modules: [{ module, see, create, modify, delete, … }], customPermissions, warnings? }`
+- **Input:** `{ roleId, view? }` → `{ roleId, name, userCount, blockedUserCount?, modules: [{ module, see, create, modify, delete, … }], modulesAtCrmDefaults, viewNote, customPermissions, warnings? }`
+- **`view`** (also on `create_role` and `update_role`; `list_roles` has none): `summary` (default) or `full`. The summary
+  lists in `modules` only the modules whose rights **differ from the CRM defaults**, plus the modules the call itself
+  changed; the others are named in `modulesAtCrmDefaults` (their rights are the defaults, not "none") and `viewNote`
+  says how to get the rest. `view: "full"` returns every module with all its flags, as before. Use `full` when you
+  need the whole matrix, e.g. to show the user a role before and after a change.
 - Module rights: `see`, `share`, `create`, `modify`, `delete`, `seeOthers`, `modifyOthers`, `deleteOthers`,
   `seeSquad`, `modifySquad`, `modifyShared`, `deleteSquad`, `deleteShared`, `seeRole`, `modifyRole`, `deleteRole`,
   `massEdit`, `massDelete`, `massExport`, `massImport`. Modules marked `derivedFrom` are computed from
@@ -859,8 +946,10 @@ them instead of correcting the role silently (a correction would grant more than
   CRM role settings.
 
 #### `create_role`
-- **Input:** `{ name, confirm: true, copyFromRoleId?, modules?, customPermissions? }` — `name` unique; without `copyFromRoleId` the
-  role starts from the CRM defaults, with it from a copy of that role (including its field rules).
+- **Input:** `{ name, confirm: true, copyFromRoleId?, modules?, customPermissions?, view? }` — `name` unique; without
+  `copyFromRoleId` the role starts from the CRM defaults, with it from a copy of that role (including its field rules).
+  The CRM defaults are broad: see, create, modify and delete on records of other people, of the squad and of the
+  role, with sharing and the mass actions off. To start narrower, copy a suitable role or send `modules` explicitly.
 - `modules`: `[{ module, <right>: true | false, … }]`, each module once; `customPermissions`: e.g.
   `canSendEmail`, `canSendSms`, `canSeeEmail` (`none` | `see` | `seeSquad` | `seeOthers`), `canEditEmailTemplate`
   (`none` | `modify` | `modifyShared` | `modifySquad` | `modifyOthers`)…
@@ -875,7 +964,7 @@ them instead of correcting the role silently (a correction would grant more than
   problem lies in a module MCP cannot change, or that holds duplicate rules, is refused with
   `VALIDATION_ERROR: This role cannot be copied over MCP: …` — correct it in the CRM role settings or create the role
   without `copyFromRoleId`. `get_role.warnings` of the source tells you beforehand.
-- **Output:** the new role (`userCount: 0`).
+- **Output:** the new role (`userCount: 0`), as a `view` (summary by default).
 
 #### `update_role`
 Changes the name, module rights (only the rights you send) or custom permissions (only the keys you send) of a role.
@@ -883,8 +972,8 @@ Every user holding the role is affected — the answer's `userCount` says how ma
 adds blocked ones, when there are any). The call is checked against the dependencies in
 [Rights depend on each other](#rights-depend-on-each-other).
 
-- **Input:** `{ roleId, confirm: true, name?, modules?, customPermissions? }`
-- **Output:** the role after the change.
+- **Input:** `{ roleId, confirm: true, name?, modules?, customPermissions?, view? }`
+- **Output:** the role after the change, as a `view` (summary by default; the modules you changed are always listed).
 
 #### `delete_role`
 - **Input:** `{ roleId, confirm: true }` → `{ deleted: true, roleId, name, listViewsReferencingRole }`
@@ -925,6 +1014,56 @@ Change only the squad membership of the users.
 - **Output:** counts of `changed` and `unchanged` users; repeating a call is harmless. A deleted, blocked or
   foreign user id is `RESOURCE_NOT_FOUND` and **nobody** is changed.
 
+### Sales pipelines and stages
+
+Create and change the sales processes of `potential` and `order` — the ones `get_pipelines` lists. Available only when
+your plan includes potentials or orders, and, like the other configuration tools, only to a company administrator
+(signed in) or an API key, with the `settings:write` scope. Read `get_pipelines` first: it gives the pipeline ids and, in
+`stages`, the stage ids.
+
+- A record keeps its stage by **name**, so renaming a pipeline or a stage renames it on the records as well (as in the CRM).
+- Names are unique — pipelines within a module, stages within a pipeline — ignoring case and spacing; a clash
+  with an existing name is `CONFLICT`, and the same stage name twice in the `stages` of one `create_pipeline` call
+  (`["A", "a"]`) is refused as `VALIDATION_ERROR: Stage 'a' is listed twice; stage names must differ …` before anything is
+  created. A pipeline name is at most 150 characters, a stage name 100; [text rules](#configuration-tools) apply
+  (no `< >`, control or invisible characters). A pipeline holds 1–30 stages.
+- `create_pipeline`, `update_pipeline`, `update_stage` and `reorder_stages` answer with the pipeline as it is after the
+  change: `{ pipelineId, module, name, stages: [{ id, name }] }`; `create_stage` and `delete_stage` answer as described
+  below.
+- The writes share the [limit](#configuration-tools) of 30 calls per 5 minutes and are audited by tool name and ids.
+- There is no tool to delete a pipeline; do that in the CRM.
+
+#### `create_pipeline`
+- **Input:** `{ module, name, stages }` — `module` is `potential` or `order`; `stages` is the list of stage names, first to
+  last, at least one (a pipeline without a stage cannot hold a record). No `confirm`.
+- **Output:** the new pipeline, with the stage ids.
+
+#### `update_pipeline`
+- **Input:** `{ pipelineId, name, confirm: true }` — renames the pipeline and the records on it.
+
+#### `create_stage`
+- **Input:** `{ pipelineId, name, position? }` — adds an empty stage at the end, or at `position` (0 = first; at most
+  the current number of stages). No `confirm`.
+- **Output:** `{ pipeline, stage: { id, name } }`.
+
+#### `update_stage`
+- **Input:** `{ pipelineId, stageId, name, confirm: true }` — renames the stage and the records on it.
+
+#### `reorder_stages`
+- **Input:** `{ pipelineId, stageIds, confirm: true }` — `stageIds` lists **every** stage id of the pipeline exactly once,
+  in the new order. Records stay on their stages.
+
+#### `delete_stage`
+- **Input:** `{ pipelineId, stageId, moveRecordsToStageId?, confirm: true }`
+- A stage that holds records is refused with their number unless `moveRecordsToStageId` names **another stage of the
+  same pipeline**: the records move there first (they take its name), then the stage is deleted.
+  `VALIDATION_ERROR: Stage 'X' holds 3 record(s). Pass moveRecordsToStageId …`
+- The last stage of a pipeline cannot be deleted.
+- **Permanent:** the stage is removed from the pipeline and not kept in any trash; the records moved to
+  `moveRecordsToStageId` get that stage's name (and the pipeline name) as their stage, so their previous stage is not
+  recorded. Ask the user first.
+- **Output:** `{ deleted: true, stageId, name, movedRecords, pipelineId, stages }`.
+
 ### Company settings
 
 Module names, company data, record numbering and the white-label look: the settings an administrator changes in the CRM
@@ -937,7 +1076,7 @@ write answers with the settings as they are after the change. A refused change i
 changes nothing; do not try to get around it — fix the value or tell the user.
 
 #### `update_module_names`
-Changes how the company calls a module (for example "Klient" instead of "Customer") in menus, buttons and table
+Changes how the company calls a module (for example "Klient" → "Odbiorca") in menus, buttons and table
 headers. The module key never changes: integrations and the API keep using `systemModuleName`.
 
 - **Input:** `{ module, singular?, plural?, confirm: true }`; `singular` and `plural` are each
@@ -951,14 +1090,19 @@ headers. The module key never changes: integrations and the API keep using `syst
   that is not one of the renamable modules at all is refused earlier, as invalid arguments.
 - **Limits:** a form must not be empty and is at most 60 characters; `<`, `>`, control and invisible characters are
   refused.
-- **Output:** `{ module, singular: { denominator, genitive, accusative }, plural: { denominator, genitive, accusative } }`
-  — the resulting forms.
+- **Output:** `{ module, singular: { denominator, genitive, accusative }, plural: { denominator, genitive, accusative }, warnings? }`
+  — the resulting forms. `warnings` names the forms you did **not** send that still carry the default name, e.g.
+  `Forms still at the default name: singular.genitive ("Klienta") — send them too if the module should be fully renamed.`
+  A partial set is still accepted; with all six forms of your own there is no warning.
 
 #### `get_company_settings`
 - **Input:** none
-- **Output:** `{ companyName, street, number, zipCode, city, nip, desktopRoute, companyKnowledgeBase: { link }, allowedDesktopRoutes }`
+- **Output:** `{ companyName, street, number, zipCode, city, nip, desktopRoute, companyKnowledgeBase: { link }, allowedDesktopRoutes, desktopRouteModules }`
   — a value that was never set is `null`. `desktopRoute` is the start page after logging in;
   `allowedDesktopRoutes` lists the start pages this company may pick. Nothing else is returned.
+- `desktopRouteModules`: `[{ route, module, name }]` — the same routes, each with the `module` its page opens and the
+  `name` this company gives that module (plural). The route values are fixed Polish labels (e.g. `Lista Klientów`) that
+  do **not** follow module renames; use `name` to find the route of a module the company calls differently.
 
 #### `update_company_settings`
 Changes the company data shown in Settings. Send only the fields to change; the others keep their value.

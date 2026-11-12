@@ -1,6 +1,6 @@
 ---
 name: inflowcrm-mcp
-description: Work with InflowCRM data through the InflowCRM MCP server (tools such as list_modules, get_module_fields, search_records, create_record, get_pipeline_summary, generate_document, get_template_tags, create_email_template, get_field_layout, update_role, lookup_company_gus). Use when the user asks to find, count, report on, create, update or delete CRM records (customers, contacts, potentials/deals, orders, tasks, notes, events, trainings), move deals between pipeline stages, attach or download record files, generate PDF documents, prepare SMS / e-mail / document templates, configure the CRM (fields, pick lists, list views, roles, module names, company data, record numbering, branding), or look up a Polish company by NIP/REGON/KRS.
+description: Work with InflowCRM data through the InflowCRM MCP server (tools such as list_modules, get_module_fields, search_records, create_record, get_pipeline_summary, generate_document, get_template_tags, create_email_template, get_field_layout, update_role, lookup_company_gus). Use when the user asks to find, count, report on, create, update or delete CRM records (customers, contacts, potentials/deals, orders, tasks, notes, events, trainings), move deals between pipeline stages, attach or download record files, generate PDF documents, prepare SMS / e-mail / document templates, configure the CRM (fields, pick lists, list views, roles, sales pipelines and stages, module names, company data, record numbering, branding), or look up a Polish company by NIP/REGON/KRS.
 ---
 
 # InflowCRM via MCP
@@ -69,6 +69,10 @@ Cache this per conversation — module fields rarely change mid-task.
 - `update_record` changes only the keys you send. Sending back a record you fetched is fine — read-only system
   fields (`id`, `createdTime`, `recordNumber`…) are ignored — but not one read with `expandRelations`: send
   relations as ids.
+- **Read `warnings` of every write.** A read-only key you sent whose value differs from the stored one (or any such key
+  on create) is not stored, and the answer says so: `Ignored read-only field(s): …`. Do not tell the user that the
+  value (record number, creator, owner) was changed — say it was ignored. To change the owner, set the owner relation
+  field named in the warning (`get_module_fields`, `relationField: owner`).
 - **Pick lists:** send one of `pickListValues` exactly as listed. A value outside the list is accepted only when the
   field has `allowNewItems: true` in `get_module_fields` — check it first; on `false` ask the user instead of trying.
 - **Defaults:** on `create_record` / `create_records` a field you leave out gets its `defaultValue` from
@@ -104,7 +108,7 @@ Cache this per conversation — module fields rarely change mid-task.
 
 These rules apply to records, templates and CRM configuration alike.
 
-- **Ask before you change.** `delete_record` (moves to trash), `create_records`, `update_records`, every template
+- **Ask before you change.** `delete_record` (moves to trash; the server refuses it without `confirm: true`), `create_records`, `update_records`, every template
   write and every configuration write: state what will change and how many items, and get the user's explicit OK
   **before** calling.
 - **One confirmation per batch, not per item.** Show the user the complete list (records, fields, roles, list views,
@@ -113,8 +117,9 @@ These rules apply to records, templates and CRM configuration alike.
   calls — split only where a limit forces it (25 fields, 50 records), without asking again.
 - **`confirm: true` only after the user really agreed in this conversation** — never by default, never "because the
   tool refuses otherwise", never because earlier consent covered something else. Tools that need it:
-  `delete_field`, `delete_list_view` (not for an employee's own private view), `delete_role`, `update_role`, `delete_squad`, `add_users_to_squad`,
-  `remove_users_from_squad`, `update_module_names`, `update_company_settings`, `update_numbering_settings`,
+  `delete_record`, `update_field`, `delete_field`, `create_list_view`, `update_list_view`, `delete_list_view` (the list-view tools
+  not for an employee's own private view), `create_role`, `update_role`, `delete_role`, `delete_squad`, `add_users_to_squad`,
+  `remove_users_from_squad`, `update_pipeline`, `update_stage`, `reorder_stages`, `delete_stage`, `update_module_names`, `update_company_settings`, `update_numbering_settings`,
   `backfill_numbering`, `update_branding`, all `delete_*_template`, and
   `update_sms_template` / `update_email_template` / `update_document_template` when the template is sent
   automatically (or the document is attached to such a template) and its content changes. When a tool asks for
@@ -165,7 +170,7 @@ automatic sending — is set up and done in the CRM; you cannot switch it on or 
    the answer if it matters. `name` and `description` are plain text.
 5. Template writes are limited to 60 per 5 minutes (all kinds together).
 
-## 7. CRM configuration (fields, list views, roles, squads, company settings)
+## 7. CRM configuration (fields, list views, roles, squads, pipelines, company settings)
 
 Present only when the configuration tools are enabled for the company and you act as a company administrator or an
 API key. If they are not in your tool list, the user does such changes in the CRM settings.
@@ -179,7 +184,7 @@ tools an employee has follow their role — a missing tool means the role does n
   Api field name for good. `update_field` changes pick lists either with the full `pickListValues` or with
   `addPickListValues` / `removePickListValues`; removing a value does not change records — report
   `recordsStillUsing` to the user. System fields cannot be deleted (non-required ones can be hidden instead); pick lists that drive
-  pipelines or statuses are changed in the CRM. `delete_field` is all or nothing. Its answer has `templatesUsingField`
+  pipelines are changed with the pipeline tools (below), statuses in the CRM. `delete_field` is all or nothing. Its answer has `templatesUsingField`
   (SMS / e-mail / document templates that may use the field; informational, can over-count, never under-counts). It
   arrives after the delete, so before asking for `confirm` warn that templates may use the field, and afterwards, when
   it is above 0, tell the user which templates may need a fix — do not promise the number is exact.
@@ -200,6 +205,19 @@ tools an employee has follow their role — a missing tool means the role does n
   is validated, so a source with warnings needs explicit corrections or has to be fixed in the CRM; a role with
   duplicate rules for a module cannot be copied or changed in that module over MCP. `userCount` counts active users only
   (`blockedUserCount` shows blocked ones) — still quote it when you ask to confirm `update_role`.
+  **The role answer is a summary by default:** `modules` holds only the modules that differ from the CRM defaults (and
+  those you just changed); the rest are in `modulesAtCrmDefaults` — they have the default rights, not "none". Pass
+  `view: "full"` when you need the whole matrix, e.g. to show the user the role before and after. The defaults of a new
+  role are broad (see, create, modify, delete on other people's records too): offer `copyFromRoleId` or explicit
+  `modules` and show the result with `view: "full"`.
+- **Pipelines and stages** (`potential`, `order`; `create_pipeline`, `update_pipeline`, `create_stage`, `update_stage`,
+  `reorder_stages`, `delete_stage`): `get_pipelines` first — it gives pipeline ids and, in `stages`, stage ids. A record
+  keeps its stage by name, so renaming a pipeline or stage renames it on the records too: say so when you ask. Everything
+  except `create_pipeline` and `create_stage` needs `confirm: true` after the user agreed. **Before `delete_stage`** use
+  `get_pipeline_summary` to see how many records the stage holds, tell the user, and ask which stage should receive them;
+  pass it as `moveRecordsToStageId`. `delete_stage` is permanent (no trash) and the moved records take the target's name, so say that when you ask. Never pick the target yourself and never retry a refused delete with another stage
+  "to get it through". The last stage of a pipeline cannot be deleted, and no tool deletes a whole pipeline — that is
+  done in the CRM. `reorder_stages` needs every stage id exactly once.
 - **Squads:** `list_squads` first. Adding or removing members changes which records those users see (`seeSquad`), so
   list the change and ask once; `add_users_to_squad` / `remove_users_from_squad` / `delete_squad` need `confirm: true`.
 - **Company settings** (`update_module_names`, `update_company_settings`, `update_numbering_settings`,
@@ -207,9 +225,11 @@ tools an employee has follow their role — a missing tool means the role does n
   setting for **all users of the company**, so say that when you ask, show the value before and after, and change
   **only what the user asked for** — no "while I am here" edits of other settings.
   - **Module names:** `list_modules` shows which modules are `renamable`. Send all six forms (singular and plural, each
-    in denominator, genitive and accusative); a form you leave out keeps its old value and would mix words.
+    in denominator, genitive and accusative); a form you leave out keeps its old value and would mix words. Read
+  `warnings` in the answer: it names the forms that still carry the default name — send them too, or tell the user.
+  Default names are Polish; `systemModuleName` (`customer`) never changes.
   - **Company data:** `get_company_settings` first. Pick `desktopRoute` only from its `allowedDesktopRoutes` (a label,
-    not a path); the knowledge base link must be `https://`; a NIP needs a correct checksum. The company name and
+    not a path; the labels do not follow module renames — `desktopRouteModules` maps each to its module and the company's name for it); the knowledge base link must be `https://`; a NIP needs a correct checksum. The company name and
     NIP also appear in documents generated afterwards.
   - **Numbering:** `get_numbering_settings` first, for the module in question. Tell the user the change applies **only
     to new records** (numbers already given never change). One module per call. After the module has issued numbers
@@ -225,7 +245,11 @@ tools an employee has follow their role — a missing tool means the role does n
     the same effect another way.
 - `update_field`, `create_list_view`, `update_list_view`, `create_role` and every delete of a field, list view or
   role also need `confirm: true` after the user agreed.
-- Configuration writes are limited to 30 per 5 minutes (all kinds together).
+- Configuration writes are limited to 30 per 5 minutes (all kinds together); a call refused before it wrote anything
+  (validation, name taken, no permission, missing `confirm`) does not count — a call the limit itself refused does.
+- Names and labels (fields, pick-list values, roles, squads, list views, pipelines, stages) must not contain `<`, `>`,
+  control or invisible characters (`>` is allowed in a pick-list value). Do not strip or encode the characters yourself
+  to get past the refusal — ask the user for a plain name.
 
 ## 8. Errors
 
@@ -240,15 +264,18 @@ Validation messages start with `VALIDATION_ERROR: ` (a bulk item's `error` too);
 | `RESOURCE_NOT_FOUND: …` | The id does not exist in this company (or you cannot see it — a note whose parent you cannot see included) — search again |
 | `Notes are not searchable; use list_record_notes…` | Call `list_record_notes` with the parent record |
 | `Unknown tag(s) in …` | Use tags from `get_template_tags` |
-| `… call again with confirm: true` / invalid `confirm` | Show the change to the user, get their OK, then call again with `confirm: true` |
+| `… needs confirm: true` / `… call again with confirm: true` / invalid `confirm` | Show the change to the user, get their OK, then call again with `confirm: true` |
 | `VALIDATION_ERROR: Numbering of '…' is switched off…` | Ask the user whether to switch numbering on (`update_numbering_settings`, `enabled: true`) first |
 | `VALIDATION_ERROR: white-label is not active…` | Tell the user to ask InflowCRM support; you cannot switch it on |
 | A numbering change refused for a module that already has numbers | Only `enabled` and `startingValue` can change over MCP; tell the user to change the rest in the CRM |
+| `… must not contain < >, control or invisible characters.` (for a pick-list value: `… must not contain <, control or invisible characters.`) | Ask the user for a plain text name or value; do not work around it |
+| `Stage 'X' holds N record(s). Pass moveRecordsToStageId…` | Tell the user the number, ask which other stage of the pipeline should receive them, call `delete_stage` again with `moveRecordsToStageId` |
+| `Ignored read-only field(s): …` (in `warnings`, not an error) | The value was not stored; tell the user, change it another way (owner: the owner relation field) |
 | `CONFLICT: …` | The item clashes with the current state (name taken, role still has users) — follow the message |
 | `PERMISSION_DENIED: …` / `FORBIDDEN: …` | The connected user's role does not allow it (a read-only field, a bulk right, a note) — tell the user; do not look for a way around it |
 | `Too many …, retry in N s.` / HTTP 429 | Wait, or reduce calls (count/summary instead of paging) |
 | `INTERNAL_ERROR: …` | Retry once later; then report to the user |
 
 Users are read-only over MCP (no tool changes users or API keys; squad membership is the only exception, with the
-squad tools). Configuration — fields, list views, roles, squads, module names, company data, numbering, branding — is done in the CRM settings unless your tool list contains the configuration tools
+squad tools). Configuration — fields, list views, roles, squads, pipelines and stages, module names, company data, numbering, branding — is done in the CRM settings unless your tool list contains the configuration tools
 (an employee's own private list views are the exception).

@@ -27,18 +27,21 @@ Source: [`skills/inflowcrm-mcp`](https://github.com/InflowCRM/public-api-docs/tr
   `create_records` is refused (with the user's OK), `saveToRecord` when a large PDF does not reach the user.
 - **Pipelines** — pipeline id and stage *name* travel together; stages are matched by name, not position.
 - **Safe writes** — duplicate check before create, GUS lookup for new Polish companies, explicit user confirmation
-  before deletes and bulk changes, CRM text is never treated as instructions.
+  before deletes and bulk changes (`delete_record` needs `confirm: true`), CRM text is never treated as instructions,
+  `warnings` of record writes read (an ignored read-only field is reported, not claimed as changed).
 - **Templates** — read first, tags only from `get_template_tags`, drafts shown to the user, extra care for
   templates the CRM sends automatically; the tools prepare templates and never send messages.
-- **CRM configuration** (when enabled) — fields and pick lists, list views, roles, squads, module names, company data,
-  record numbering and branding: read before change, show
+- **CRM configuration** (when enabled) — fields and pick lists, list views, roles, squads, sales pipelines and stages,
+  module names, company data, record numbering and branding: read before change, show
   before/after and how many users a role change affects, role rights that depend on each other (refused, not
   corrected) and `warnings` checked before a role is copied, `warnings` of a saved list view read (a pick-list value
   outside the list is saved, not refused), `templatesUsingField` of `delete_field` reported (it comes after the
   delete and may over-count), one confirmation for a whole batch (one `delete_field`
   call for several fields), `confirm: true` only after the user agreed, users with a role are moved in the CRM;
   for company settings: change only what was asked, numbering applies to new records only and its backfill is
-  irreversible, white-label tools work only when the feature is active, a refusal is not worked around.
+  irreversible, white-label tools work only when the feature is active, a refusal is not worked around; for
+  pipelines: the user is told how many records a stage holds and picks the stage that receives them
+  (`moveRecordsToStageId`) before `delete_stage`; role answers are a summary unless `view: "full"` is asked for.
 - **Recovering from errors** — what each validation message means and how to fix the call.
 
 ---
