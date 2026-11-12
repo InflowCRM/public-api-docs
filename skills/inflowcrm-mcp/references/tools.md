@@ -148,7 +148,15 @@ parent record you cannot see.
 { "status": "Aktywny", "city": "Kraków" }
 ```
 
-- A **date-only** value (`"2026-05-10"`) on a Date/Datetime field matches the whole day (server time zone); a value with a time matches exactly.
+- A date **without a time** on a Date or Datetime field matches that **whole day in Europe/Warsaw time**, midnight to
+  midnight (23 or 25 hours long on the days the clocks change). Write it as `2026-05-10`, `2026/05/10` or in the
+  field's own date format (`10.05.2026` for `dd.MM.yyyy`; a two-digit year such as `10.05.26` for `dd.MM.yy` works too).
+  A record saved at `2026-01-31T23:30:00Z` is on `2026-02-01` in Warsaw, so it matches `2026-02-01`, not `2026-01-31`.
+- A full ISO timestamp (`2026-05-10T10:00:00+02:00`) matches that exact moment. Write the offset (`Z`, `+02:00`)
+  right after the time, with no space; a time without an offset is read in the server's time zone.
+- Any other notation of a date — a month name (`May 10 2026`) or a zone written in the text
+  (`2026/05/10 GMT+0900`) — matches no records; it is not an error.
+- For a day in `filters`, `count_records` and `pagination.total` of `search_records` give the same number of records.
 - A **DateRange** field takes `[from, to]` and matches records whose range **starts** between `from` and `to`:
   `{ "eventDate": ["2026-05-10", "2026-05-20"] }`. Leave `from` empty (`["", "2026-05-20"]`) for "starts up to";
   with only `from` it matches records starting on that day.
@@ -180,8 +188,23 @@ parent record you cannot see.
 `advancedFilter` also accepts the system fields `id`, `createdTime`, `modifiedTime`, `createdBy`, `modifiedBy`,
 `owner`, `recordNumber`. Unknown field names are rejected with the list of valid ones.
 
-> Range conditions (`greater`, `lower`, …) on dates are supported for `createdTime` and `modifiedTime`. For your own
-> Date fields use `filters` (a whole day) or a DateRange field.
+> **Dates in `advancedFilter`.** On a Date or Datetime field and on `createdTime` / `modifiedTime`, a date without a
+> time stands for its **whole day in Europe/Warsaw time**. Write it as `2026-05-10` or in the field's own date
+> format on your own fields, and as `2026-05-10` or `2026/05/10` on `createdTime` / `modifiedTime`. `greater` means
+> after that day, `greaterOrEqual` from its start, `lower` before it, `lowerOrEqual` up to its end. A full ISO timestamp is compared
+> as the moment it names; write its offset, because a time without an offset is read in the server's time zone.
+>
+> - `equal`, `notEqual`, `in` and `notIn` with a date without a time are refused:
+>   `VALIDATION_ERROR: A date without a time stands for a whole day in Europe/Warsaw, which one … cannot express.`
+>   Use two conditions in one `AND` filter (`greaterOrEqual` the day, `lower` the next day), a full timestamp, or
+>   `filters` on a Date field. To match everything outside a day, use an `OR` filter of two conditions (`lower` the
+>   day, `greaterOrEqual` the next day).
+> - Any other value on a Date or Datetime field is refused with `VALIDATION_ERROR: Wrong value type: …`, including a
+>   year written with a sign or with six digits (`+002026-05-10T12:00:00Z`). On `createdTime` and `modifiedTime` a
+>   value the date storage accepts is compared as it reads it, and text it cannot read (`next tuesday`) is refused.
+> - A day is compared with stored date values. A record that holds its date as ISO text instead of a date value is
+>   found by `filters` but not by `advancedFilter`.
+> - A DateRange field takes `filters` with `[from, to]`.
 
 **Rules**
 
