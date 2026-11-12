@@ -608,7 +608,8 @@ Tags a template of a module may contain. Call it before writing a template.
   (`senderName` read only).
 
 #### `create_sms_template`
-- **Input:** `{ name, module, template, description?, public? }` — `template`: the SMS text, 1–1,000 characters.
+- **Input:** `{ name, module, template, description?, public? }` — `template`: the SMS text, 1–1,530 characters. The SMS provider sends at most 1,530 characters, or 670 with Polish
+  letters or other special characters, so a longer text may not go out once its tags are filled in.
 - Created with automatic sending **off**. HTML in the text is removed when saved; the answer shows the stored text.
 - **Output:** the template as in `get_sms_template`.
 
@@ -637,12 +638,18 @@ Tags a template of a module may contain. Call it before writing a template.
   `template`: HTML body, ≤ 5 MB.
 - Created with automatic sending off and no attachments.
 - **The HTML is sanitized when saved:** scripts, event handlers, iframes and other unsafe markup are removed, ordinary
-  formatting (paragraphs, lists, tables, links…) is kept. The answer contains the stored subject and body.
+  formatting (paragraphs, lists, tables, links…) is kept.
+- **Output:** the template as in `get_email_template`, but with `templateBytes` and `sanitizerRemovedContent` instead of
+  `template`. A template can hold megabytes of inline images, so the HTML is not sent back. `sanitizerRemovedContent`
+  lists the parts the sanitizer took something out of, HTML comments included (`[]` or `["template"]`). When it is not
+  empty, read the template with `get_email_template` and tell the user what is gone; sending the same text again will
+  not restore it.
 
 #### `update_email_template`
 - **Input:** `{ templateId, name?, description?, subject?, template?, public?, confirm? }` — at least one change.
 - **`confirm: true`** is needed when the template is sent automatically and `subject` or `template` changes (same
   message as for SMS).
+- **Output:** as for `create_email_template`.
 
 #### `delete_email_template`
 - **Input:** `{ templateId, confirm: true }` → `{ id, deleted: true }`
@@ -661,7 +668,12 @@ PDF templates rendered by `generate_document`. Find them with `list_document_tem
   - `settings`: `{ format?, orientation?, marginTop?, marginBottom?, marginLeft?, marginRight?, marginHeader?, marginFooter? }`
     — `format`: `A3` | `A4` | `A5` | `A6`; `orientation`: `P` (portrait) | `L` (landscape); margins in mm, 0–200.
     Defaults: A4, portrait, margins 20, header/footer margins 10.
-- **Output:** the template as in `get_document_template`.
+  - The whole request is limited to 7 MB, so parts that do not fit together go in separate `update_document_template`
+    calls.
+- **Output:** the template as in `get_document_template`, but with `templateBytes`, `headerBytes`, `footerBytes` and
+  `sanitizerRemovedContent` instead of `template`, `header` and `footer`. `sanitizerRemovedContent` lists the parts the
+  sanitizer took something out of, HTML comments included. When it is not empty, read the template with
+  `get_document_template` and tell the user what is gone; sending the same text again will not restore it.
 
 #### `update_document_template`
 - **Input:** `{ templateId, name?, description?, template?, header?, footer?, settings?, public?, confirm? }` — at least
@@ -669,6 +681,7 @@ PDF templates rendered by `generate_document`. Find them with `list_document_tem
 - **`confirm: true`** is needed when `template`, `header` or `footer` changes and the document is attached to an
   automatically sent e-mail template:
   `This document is attached to automatically sent e-mail template(s): <names>. Show the change to the user and call again with confirm: true.`
+- **Output:** as for `create_document_template`.
 
 #### `delete_document_template`
 - **Input:** `{ templateId, confirm: true }` → `{ id, deleted: true }`
