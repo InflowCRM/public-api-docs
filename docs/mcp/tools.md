@@ -94,6 +94,7 @@ Searches records with an optional free-text `query`, filters, sorting and paging
 |---|---|---|
 | `module` | string | required |
 | `query` | string | 2–100 characters; case-insensitive fragment over text fields (name, e-mail, phone, NIP, record number…) |
+| `matchScope` | string | only with `query` (otherwise a validation error). `auto` (default): matches at the start of a word first, and looks inside words only when that finds nothing. `anywhere`: always matches inside words too (slower, rate limited) |
 | `filters` | object | simple equality filters `{ apiFieldName: value }`, max 20 keys |
 | `advancedFilter` | object | `{ operator: "AND" \| "OR", conditions: [{ field, condition, value }] }`, 1–20 conditions |
 | `sort` | object | `{ apiFieldName: 1 \| -1 }`, max 3 keys. Default: newest first |
@@ -101,7 +102,20 @@ Searches records with an optional free-text `query`, filters, sorting and paging
 | `limit` | integer | 1–50, default 20 |
 | `expandRelations` | boolean | relations as `{ id, label }` instead of bare ids |
 
-**Output:** `{ records: [...], pagination: { page, limit, total, pages } }`, plus `truncated` when `query` is used.
+**Output:** `{ records: [...], pagination: { page, limit, total, pages } }`, plus `truncated` and `matchScope` when `query` is used.
+
+`matchScope` in the answer says what was searched: `word-start` means only word beginnings were checked and the middle of
+words was **not**; `anywhere` means the whole text was checked. `kowal` finds "Kowalski" with `word-start`, but "Nowakowalski"
+only with `anywhere`. Before you conclude that a record does not exist (for example before creating it), repeat a
+`word-start` search with `matchScope: "anywhere"`.
+
+Slow searches are limited to **30 per minute per company**: searches inside words, searches for a text with spaces or punctuation,
+and searches in modules without the fast word-start index. Over the limit the call fails with `Too many text searches, retry in N s.`
+
+A search can also time out, with one of two errors: `The text search took too long — narrow the query (more characters) and retry.` (word-start search) or
+`Search did not finish: the mid-word scan timed out. This does NOT mean no record exists. Do not retry right away; do not create a record on this result.` (mid-word search). Either way, no answer does **not** prove the record
+does not exist: do not create a record on that basis. A longer search text helps only after the first error; after the second, do not retry right away.
+`truncated: true` still means 500 or more candidates matched.
 
 **Notes are not searchable.** `search_records`, `find_record`, `count_records`, `get_sample_record` and the other bulk
 read tools do not accept `module: "note"` — they answer
