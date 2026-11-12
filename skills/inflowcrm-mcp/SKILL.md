@@ -117,7 +117,8 @@ These rules apply to records, templates and CRM configuration alike.
   calls — split only where a limit forces it (25 fields, 50 records), without asking again.
 - **`confirm: true` only after the user really agreed in this conversation** — never by default, never "because the
   tool refuses otherwise", never because earlier consent covered something else. Tools that need it:
-  `delete_record`, `delete_field`, `delete_list_view` (not for an employee's own private view), `delete_role`, `update_role`, `delete_squad`, `add_users_to_squad`,
+  `delete_record`, `update_field`, `delete_field`, `create_list_view`, `update_list_view`, `delete_list_view` (the list-view tools
+  not for an employee's own private view), `create_role`, `update_role`, `delete_role`, `delete_squad`, `add_users_to_squad`,
   `remove_users_from_squad`, `update_pipeline`, `update_stage`, `reorder_stages`, `delete_stage`, `update_module_names`, `update_company_settings`, `update_numbering_settings`,
   `backfill_numbering`, `update_branding`, all `delete_*_template`, and
   `update_sms_template` / `update_email_template` / `update_document_template` when the template is sent
@@ -263,7 +264,7 @@ Validation messages start with `VALIDATION_ERROR: ` (a bulk item's `error` too);
 | `RESOURCE_NOT_FOUND: …` | The id does not exist in this company (or you cannot see it — a note whose parent you cannot see included) — search again |
 | `Notes are not searchable; use list_record_notes…` | Call `list_record_notes` with the parent record |
 | `Unknown tag(s) in …` | Use tags from `get_template_tags` |
-| `… call again with confirm: true` / invalid `confirm` | Show the change to the user, get their OK, then call again with `confirm: true` |
+| `… needs confirm: true` / `… call again with confirm: true` / invalid `confirm` | Show the change to the user, get their OK, then call again with `confirm: true` |
 | `VALIDATION_ERROR: Numbering of '…' is switched off…` | Ask the user whether to switch numbering on (`update_numbering_settings`, `enabled: true`) first |
 | `VALIDATION_ERROR: white-label is not active…` | Tell the user to ask InflowCRM support; you cannot switch it on |
 | A numbering change refused for a module that already has numbers | Only `enabled` and `startingValue` can change over MCP; tell the user to change the rest in the CRM |
